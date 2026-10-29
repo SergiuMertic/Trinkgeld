@@ -1,6 +1,6 @@
 // Service worker: keeps the app working without internet.
 // Bump CACHE when any file changes so phones pick up the new version.
-const CACHE = 'trinkgeld-v2';
+const CACHE = 'trinkgeld-v3';
 const ASSETS = [
   "./",
   "./index.html",

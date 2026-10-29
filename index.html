@@ -241,7 +241,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
 .slider {
   --r: 14px; --p: 0;
   position: relative; height: 58px;
-  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+  touch-action: pan-y; user-select: none; -webkit-user-select: none;
 }
 .slider:focus { outline: none; }
 .slider.drag { cursor: grabbing; }
@@ -255,7 +255,9 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
   left: calc(var(--r) + (100% - 2 * var(--r)) * var(--p));
   border-radius: 50%; background: var(--thumb); box-shadow: var(--thumb-shadow);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  touch-action: none; cursor: grab;
 }
+.slider .thumb::before { content: ""; position: absolute; inset: -12px; border-radius: 50%; }
 .slider.drag .thumb { transform: scale(1.1); }
 .slider:focus-visible .thumb { box-shadow: var(--thumb-shadow), 0 0 0 4px var(--focus); }
 .ticks { position: absolute; left: var(--r); right: var(--r); top: 34px; height: 22px; }
@@ -1006,22 +1008,33 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 
   /* ---------- Slider input: drag anywhere on the track ---------- */
   var dragging = false;
+  var grabOffset = 0;
+  var R = 14;
+  function thumbX(r) {
+    var p = Math.min(curAmount(), MAX_SLIDER) / MAX_SLIDER;
+    return r.left + R + (r.width - 2 * R) * p;
+  }
   function setFromX(x) {
     var r = slider.getBoundingClientRect();
-    var R = 14;
     var frac = (x - r.left - R) / Math.max(1, r.width - 2 * R);
     frac = Math.max(0, Math.min(1, frac));
     setAmount(Math.round(frac * MAX_SLIDER / STEP) * STEP);
   }
   slider.addEventListener('pointerdown', function (e) {
     if (e.button !== undefined && e.button > 0) return;
+    // Only the round handle changes the amount. A touch anywhere else on the bar
+    // does nothing, so scrolling the page never changes the tip by accident.
+    var r = slider.getBoundingClientRect();
+    var tx = thumbX(r);
+    var ty = r.top + 19;
+    if (Math.abs(e.clientX - tx) > 26 || Math.abs(e.clientY - ty) > 26) return;
     dragging = true;
+    grabOffset = e.clientX - tx;
     try { slider.setPointerCapture(e.pointerId); } catch (err) {}
     slider.classList.add('drag');
-    setFromX(e.clientX);
     e.preventDefault();
   });
-  slider.addEventListener('pointermove', function (e) { if (dragging) setFromX(e.clientX); });
+  slider.addEventListener('pointermove', function (e) { if (dragging) setFromX(e.clientX - grabOffset); });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
     slider.addEventListener(ev, function () { dragging = false; slider.classList.remove('drag'); });
   });
