@@ -296,7 +296,8 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
   display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: 12px;
   width: 100%; padding: 13px 14px; text-align: left;
 }
-.sdate { font-weight: 600; white-space: nowrap; }
+.sdate { display: flex; flex-direction: column; font-weight: 600; white-space: nowrap; }
+.sdate .st { font-size: 12px; font-weight: 500; color: var(--muted); }
 .bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .bar .fillw { display: flex; height: 100%; border-radius: 4px; overflow: hidden; }
 .bar .c { background: var(--cash-bar); }
@@ -326,6 +327,35 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 .toast span { flex: 1; min-width: 0; }
 .toast button { color: var(--toast-action); font-weight: 700; padding: 8px 12px; border-radius: 8px; }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Trips (Touren) within a shift */
+.tripbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow);
+  padding: 12px 12px 12px 16px;
+}
+.trip-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.trip-label { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1.1; }
+.trip-sum { font-size: 14px; color: var(--muted); }
+.trip-end {
+  flex: none; height: 44px; padding: 0 14px; border-radius: 12px;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 1px solid var(--well-line); color: var(--ink);
+  font-size: 15px; font-weight: 700;
+}
+.trip-end svg { width: 18px; height: 18px; }
+.trip-end:disabled { opacity: 0.4; }
+.trip-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px;
+  padding: 12px 14px; background: var(--surface-2);
+}
+.th-name { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.th-total { grid-row: span 2; font-weight: 700; font-size: 17px; white-space: nowrap; }
+.th-split { font-size: 13px; color: var(--muted); }
+.live {
+  font-family: var(--font-body); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--green-text); background: var(--green-soft); padding: 2px 6px; border-radius: 6px;
+}
 
 /* Split tip: one customer, part cash and part online */
 .parts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -426,6 +456,17 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
         <div><span class="k kc">Bargeld</span><span class="v num" id="shiftCash">0,00 €</span></div>
         <div><span class="k ko">Online</span><span class="v num" id="shiftOnline">0,00 €</span></div>
       </div>
+    </div>
+
+    <div class="tripbar" id="tripbar">
+      <div class="trip-info">
+        <span class="trip-label" id="tripLabel">Tour 1</span>
+        <span class="trip-sum num" id="tripSum">Noch keine Einträge in dieser Tour</span>
+      </div>
+      <button type="button" class="trip-end" id="tripEnd" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        Tour beenden
+      </button>
     </div>
 
     <div class="card is-cash" id="addCard">
@@ -613,16 +654,18 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     if (!t || typeof t !== 'object') return null;
     var id = typeof t.id === 'string' ? t.id.slice(0, 40) : Math.random().toString(36).slice(2, 10);
     var at = typeof t.at === 'string' ? t.at.slice(0, 40) : '';
+    var trip = Math.round(Number(t.trip));
+    if (!isFinite(trip) || trip < 1 || trip > 99) trip = 1;
     if (t.type === 'both') {
       var c = Math.round(Number(t.cash)), o = Math.round(Number(t.online));
       if (!isFinite(c) || !isFinite(o) || c < 0 || o < 0 || c + o <= 0 || c + o > 1000000) return null;
-      return { id: id, amount: c + o, type: 'both', cash: c, online: o, at: at };
+      return { id: id, amount: c + o, type: 'both', cash: c, online: o, at: at, trip: trip };
     }
     var amount = Math.round(Number(t.amount));
     if (!isFinite(amount) || amount <= 0 || amount > 1000000) return null;
     var type = t.type === 'cash' || t.type === 'online' ? t.type : null;
     if (!type) return null;
-    return { id: id, amount: amount, type: type, at: at };
+    return { id: id, amount: amount, type: type, at: at, trip: trip };
   }
   function cleanShifts(obj) {
     var out = {};
@@ -630,7 +673,11 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
       var list = obj[date] && Array.isArray(obj[date].tips) ? obj[date].tips : [];
       var tips = list.map(cleanTip).filter(Boolean);
-      if (tips.length) out[date] = { date: date, tips: tips };
+      if (tips.length) {
+        out[date] = { date: date, tips: tips };
+        var tr = Math.round(Number(obj[date].trip));
+        if (isFinite(tr) && tr > 1 && tr <= 99) out[date].trip = tr;
+      }
     });
     return out;
   }
@@ -644,6 +691,28 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     return { cash: cash, online: online, total: cash + online, count: tips.length };
   }
   function tipsWord(n) { return n === 1 ? '1 Eintrag' : n + ' Einträge'; }
+  function tripsWord(n) { return n === 1 ? '1 Tour' : n + ' Touren'; }
+  function tripOf(t) { return t.trip || 1; }
+  // The trip (Tour) new tips go into: the highest trip with tips, or a newer one started with "Tour beenden".
+  function currentTrip(date) {
+    var s = state.shifts[date];
+    if (!s) return 1;
+    var max = 1;
+    s.tips.forEach(function (t) { if (tripOf(t) > max) max = tripOf(t); });
+    return Math.max(max, s.trip || 1);
+  }
+  function tripCount(tips) {
+    var seen = {}, n = 0;
+    tips.forEach(function (t) { var k = tripOf(t); if (!seen[k]) { seen[k] = true; n++; } });
+    return n;
+  }
+  function shiftWith(date, tips, trip) {
+    var o = { date: date, tips: tips };
+    var s = state.shifts[date];
+    var tr = trip !== undefined ? trip : (s && s.trip);
+    if (tr && tr > 1) o.trip = tr;
+    return o;
+  }
   function canWrite() { return state.mode === 'local' || (state.mode === 'cloud' && state.loaded); }
   function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function describe(t) {
@@ -686,6 +755,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
         return ref.set({ date: date, tips: s.tips.map(function (t) {
           var o = { id: t.id, amount: t.amount, type: t.type, at: t.at };
           if (t.type === 'both') { o.cash = t.cash; o.online = t.online; }
+          if (t.trip > 1) o.trip = t.trip;
           return o;
         }) });
       }
@@ -756,9 +826,10 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     var date = state.day;
     var tip = makeTip();
     if (!tip) return;
+    tip.trip = currentTrip(date);
     var cur = state.shifts[date];
     var next = Object.assign({}, state.shifts);
-    next[date] = { date: date, tips: (cur ? cur.tips : []).concat(tip) };
+    next[date] = shiftWith(date, (cur ? cur.tips : []).concat(tip));
     state.shifts = next;
     persist(date);
     render();
@@ -775,7 +846,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     var tip = s.tips[idx];
     var tips = s.tips.filter(function (t) { return t.id !== id; });
     var next = Object.assign({}, state.shifts);
-    if (tips.length) next[date] = { date: date, tips: tips }; else delete next[date];
+    if (tips.length) next[date] = shiftWith(date, tips); else delete next[date];
     state.shifts = next;
     persist(date);
     render();
@@ -785,7 +856,33 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       if (list.some(function (t) { return t.id === tip.id; })) return;
       list.splice(Math.min(idx, list.length), 0, tip);
       var n = Object.assign({}, state.shifts);
-      n[date] = { date: date, tips: list };
+      n[date] = shiftWith(date, list);
+      state.shifts = n;
+      persist(date);
+      render();
+    });
+  }
+  function endTrip() {
+    if (!canWrite()) return;
+    var date = state.day;
+    var s = state.shifts[date];
+    var cur = currentTrip(date);
+    var tripTips = s ? s.tips.filter(function (t) { return tripOf(t) === cur; }) : [];
+    if (!tripTips.length) return;
+    var total = sum(tripTips).total;
+    var next = Object.assign({}, state.shifts);
+    next[date] = shiftWith(date, s.tips, cur + 1);
+    state.shifts = next;
+    persist(date);
+    render();
+    toast('Tour ' + cur + ' beendet: ' + fmt(total) + '. Tour ' + (cur + 1) + ' läuft.', 'Rückgängig', function () {
+      var c = state.shifts[date];
+      if (!c || currentTrip(date) !== cur + 1) return;
+      if (c.tips.some(function (t) { return tripOf(t) === cur + 1; })) return;
+      var n = Object.assign({}, state.shifts);
+      var o = { date: date, tips: c.tips };
+      if (cur > 1) o.trip = cur;
+      n[date] = o;
       state.shifts = n;
       persist(date);
       render();
@@ -855,17 +952,46 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 
     var tips = state.shifts[state.day] ? state.shifts[state.day].tips : [];
     var s = sum(tips);
+    var curTrip = currentTrip(state.day);
+    var nTrips = tripCount(tips);
     $('shiftTotal').textContent = fmt(s.total);
     $('shiftCash').textContent = fmt(s.cash);
     $('shiftOnline').textContent = fmt(s.online);
-    $('shiftCount').textContent = tipsWord(s.count);
+    $('shiftCount').textContent = tipsWord(s.count) + (nTrips > 1 ? ' · ' + tripsWord(nTrips) : '');
+    var cs = sum(tips.filter(function (t) { return tripOf(t) === curTrip; }));
+    $('tripLabel').textContent = 'Tour ' + curTrip;
+    $('tripSum').textContent = cs.count ? fmt(cs.total) + ' in dieser Tour' : 'Noch keine Einträge in dieser Tour';
+    $('tripEnd').disabled = !cs.count || !canWrite();
+    $('tripbar').hidden = state.mode === 'private';
     setSplit($('shiftSplit'), s.cash, s.online);
     $('listHint').textContent = s.count ? 'Neueste zuerst' : '';
 
     var list = $('tipList');
     list.textContent = '';
-    var sorted = tips.slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
-    sorted.forEach(function (t) {
+    // One group per trip, newest trip first, each with its own total
+    var groups = {};
+    tips.forEach(function (t) { var k = tripOf(t); (groups[k] = groups[k] || []).push(t); });
+    var nums = Object.keys(groups).map(Number);
+    if (tips.length && nums.indexOf(curTrip) < 0) nums.push(curTrip);
+    nums.sort(function (a, b) { return b - a; });
+    var isToday = state.day === today();
+    nums.forEach(function (n) {
+    var gt = (groups[n] || []).slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
+    var gs = sum(gt);
+    var head = document.createElement('li');
+    head.className = 'trip-head';
+    head.innerHTML = '<span class="th-name"><span class="th-title"></span></span><span class="th-total num"></span><span class="th-split num"></span>';
+    head.querySelector('.th-title').textContent = 'Tour ' + n;
+    if (n === curTrip && isToday) {
+      var live = document.createElement('span');
+      live.className = 'live';
+      live.textContent = 'läuft';
+      head.querySelector('.th-name').appendChild(live);
+    }
+    head.querySelector('.th-total').textContent = fmt(gs.total);
+    head.querySelector('.th-split').textContent = gs.count ? fmt(gs.cash) + ' Bargeld · ' + fmt(gs.online) + ' Online' : 'Noch keine Einträge';
+    list.appendChild(head);
+    gt.forEach(function (t) {
       var li = document.createElement('li');
       li.className = 'tip';
       li.innerHTML =
@@ -885,6 +1011,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       del.addEventListener('click', function () { removeTip(state.day, t.id); });
       list.appendChild(li);
     });
+    });
     list.hidden = !tips.length;
     $('shiftEmpty').hidden = !!tips.length;
     $('shiftEmpty').textContent = state.mode === 'private'
@@ -899,10 +1026,11 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('monthLabel').textContent = monthName;
 
     var dates = Object.keys(state.shifts).filter(function (k) { return k.slice(0, 7) === state.month; }).sort().reverse();
-    var cash = 0, online = 0, count = 0, max = 0;
+    var cash = 0, online = 0, count = 0, max = 0, trips = 0;
     var rows = dates.map(function (date) {
       var s = sum(state.shifts[date].tips);
       cash += s.cash; online += s.online; count += s.count;
+      trips += tripCount(state.shifts[date].tips);
       if (s.total > max) max = s.total;
       return { date: date, s: s };
     });
@@ -912,7 +1040,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('monthOnline').textContent = fmt(online);
     setSplit($('monthSplit'), cash, online);
     $('monthMeta').textContent = dates.length
-      ? dates.length + (dates.length === 1 ? ' Schicht' : ' Schichten') + ' · ' + tipsWord(count) + ' · Ø ' + fmt(Math.round(total / dates.length)) + ' pro Schicht'
+      ? dates.length + (dates.length === 1 ? ' Schicht' : ' Schichten') + ' · ' + tripsWord(trips) + ' · ' + tipsWord(count) + ' · Ø ' + fmt(Math.round(total / dates.length)) + ' pro Schicht · Ø ' + fmt(Math.round(total / Math.max(1, trips))) + ' pro Tour'
       : 'Noch keine Schichten';
 
     var list = $('shiftList');
@@ -923,11 +1051,12 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       b.type = 'button';
       b.className = 'shiftrow';
       b.innerHTML =
-        '<span class="sdate num"></span>' +
+        '<span class="sdate num"><span class="sd"></span><span class="st"></span></span>' +
         '<span class="bar" aria-hidden="true"><span class="fillw"><i class="c"></i><i class="o"></i></span></span>' +
         '<span class="amt num"></span>';
       var d = fromISO(r.date);
-      b.querySelector('.sdate').textContent = fDayShort.format(d);
+      b.querySelector('.sd').textContent = fDayShort.format(d);
+      b.querySelector('.st').textContent = tripsWord(tripCount(state.shifts[r.date].tips));
       b.querySelector('.amt').textContent = fmt(r.s.total);
       b.querySelector('.fillw').style.width = (max ? r.s.total / max * 100 : 0) + '%';
       b.querySelector('.c').style.width = (r.s.total ? r.s.cash / r.s.total * 100 : 0) + '%';
@@ -1063,6 +1192,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     b.addEventListener('click', function () { state.part = b.getAttribute('data-part'); renderAmount(); });
   });
   $('addBtn').addEventListener('click', addTip);
+  $('tripEnd').addEventListener('click', endTrip);
   $('prevDay').addEventListener('click', function () { moveDay(-1); });
   $('nextDay').addEventListener('click', function () { moveDay(1); });
   $('prevMonth').addEventListener('click', function () { moveMonth(-1); });
@@ -1180,7 +1310,13 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
         incoming[date].tips.forEach(function (t) {
           if (!seen[t.id]) { tips.push(t); seen[t.id] = true; added++; }
         });
-        if (tips.length) next[date] = { date: date, tips: tips };
+        if (tips.length) {
+          var prevTrip = next[date] && next[date].trip;
+          var inTrip = incoming[date].trip;
+          next[date] = { date: date, tips: tips };
+          var tr = Math.max(prevTrip || 1, inTrip || 1);
+          if (tr > 1) next[date].trip = tr;
+        }
       });
       state.shifts = next;
       if (!writeLS(LOCAL, state.shifts)) {
