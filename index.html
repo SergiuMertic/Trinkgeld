@@ -653,16 +653,21 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     var at = typeof t.at === 'string' ? t.at.slice(0, 40) : '';
     var trip = Math.round(Number(t.trip));
     if (!isFinite(trip) || trip < 1 || trip > 99) trip = 1;
+    var note = typeof t.note === 'string' ? t.note.slice(0, 40) : '';
     if (t.type === 'both') {
       var c = Math.round(Number(t.cash)), o = Math.round(Number(t.online));
       if (!isFinite(c) || !isFinite(o) || c < 0 || o < 0 || c + o <= 0 || c + o > 1000000) return null;
-      return { id: id, amount: c + o, type: 'both', cash: c, online: o, at: at, trip: trip };
+      var rb = { id: id, amount: c + o, type: 'both', cash: c, online: o, at: at, trip: trip };
+      if (note) rb.note = note;
+      return rb;
     }
     var amount = Math.round(Number(t.amount));
     if (!isFinite(amount) || amount <= 0 || amount > 1000000) return null;
     var type = t.type === 'cash' || t.type === 'online' ? t.type : null;
     if (!type) return null;
-    return { id: id, amount: amount, type: type, at: at, trip: trip };
+    var r = { id: id, amount: amount, type: type, at: at, trip: trip };
+    if (note) r.note = note;
+    return r;
   }
   function cleanShifts(obj) {
     var out = {};
@@ -1000,7 +1005,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       var when = t.at ? new Date(t.at) : null;
       var timeText = when && !isNaN(when) && isoDay(when) === state.day ? fTime.format(when) : '';
       var detail = t.type === 'both' ? fmt(t.cash) + ' Bargeld · ' + fmt(t.online) + ' Online' : '';
-      li.querySelector('.time').textContent = [detail, timeText].filter(Boolean).join(' · ');
+      li.querySelector('.time').textContent = [t.note, detail, timeText].filter(Boolean).join(' · ');
       li.querySelector('.amt').textContent = fmt(t.amount);
       var del = li.querySelector('.del');
       del.setAttribute('aria-label', describe(t) + ' löschen');
