@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trinkgeld</title>
+<meta name="description" content="Trinkgeld pro Schicht erfassen, Bargeld und Online getrennt. Funktioniert offline.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trinkgeld">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#82BE3C" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#23401A" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preload" href="fonts/barlow-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/barlow-semi-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+
+/* Local fonts so the app works without internet (Barlow, SIL Open Font License, see fonts/OFL.txt) */
+@font-face { font-family: "Barlow"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/barlow-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/barlow-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/barlow-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/barlow-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/barlow-semi-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/barlow-semi-condensed-latin-700-normal.woff2") format("woff2"); }
+
+/* Base reset (the Claude viewer used to provide this) */
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Layout: a Flaschenpost-green header band, then one narrow phone column on a warm off-white (light) or black (dark) page. White boxes in light mode, lavender-tinted boxes in dark mode; berry for actions, a lavender totals box. Cash is berry, online is green. */
+:root {
+  --bg: #F6F3EC;
+  --surface: #FFFFFF;
+  --surface-2: #F4F0E8;
+  --well-line: #E7E0D2;
+  --hero: #F2ECF6;
+  --track: #E6DFD1;
+  --tab-bg: #ECE5D8;
+  --tab-on: #A93D5A;
+  --tab-on-ink: #FFFFFF;
+  --ink: #1C1A17;
+  --muted: #6B655B;
+  --line: #ECE6DA;
+  --primary: #A93D5A;
+  --primary-ink: #FFFFFF;
+  --header: #82BE3C;
+  --header-ink: #10260A;
+  --header-muted: #263F12;
+  --logo-bg: #FFFFFF;
+  --logo-ink: #5E9A1E;
+  --green-text: #3D6B12;
+  --green-soft: #EAF5DC;
+  --cash: #A93D5A;
+  --cash-soft: #F8E8EE;
+  --cash-bar: #C24B6C;
+  --online: #3D6B12;
+  --online-soft: #EAF5DC;
+  --online-bar: #7DB83A;
+  --thumb: #FFFFFF;
+  --toast-action: #F3A9BE;
+  --focus: #A93D5A;
+  --shadow: 0 1px 2px rgb(40 30 20 / 0.06), 0 4px 14px rgb(40 30 20 / 0.06);
+  --thumb-shadow: 0 1px 3px rgb(28 26 23 / 0.28), 0 0 0 0.5px rgb(28 26 23 / 0.12);
+  --shadow-lg: 0 8px 28px rgb(28 26 23 / 0.22);
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, -apple-system, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #201C29; --surface-2: #2B2636; --well-line: #3B3449; --hero: #352C4A; --track: #463D5C;
+    --tab-bg: #201C29; --tab-on: #C2496A; --tab-on-ink: #FFFFFF;
+    --ink: #F2EFF4; --muted: #B7B0C2; --line: #322B40;
+    --primary: #C2496A; --primary-ink: #FFFFFF;
+    --header: #23401A; --header-ink: #E3F2D2; --header-muted: #B6D39A; --logo-bg: #F2EFF4; --logo-ink: #4E8A1A;
+    --green-text: #A6DB66; --green-soft: #1E2B14;
+    --cash: #F28BA8; --cash-soft: #3A1A25; --cash-bar: #E0607F;
+    --online: #A6DB66; --online-soft: #1E2B14; --online-bar: #8CC84B;
+    --thumb: #FFFFFF; --toast-action: #A93D5A; --focus: #F28BA8;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --thumb-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #201C29; --surface-2: #2B2636; --well-line: #3B3449; --hero: #352C4A; --track: #463D5C;
+  --tab-bg: #201C29; --tab-on: #C2496A; --tab-on-ink: #FFFFFF;
+  --ink: #F2EFF4; --muted: #B7B0C2; --line: #322B40;
+  --primary: #C2496A; --primary-ink: #FFFFFF;
+  --header: #23401A; --header-ink: #E3F2D2; --header-muted: #B6D39A; --logo-bg: #F2EFF4; --logo-ink: #4E8A1A;
+  --green-text: #A6DB66; --green-soft: #1E2B14;
+  --cash: #F28BA8; --cash-soft: #3A1A25; --cash-bar: #E0607F;
+  --online: #A6DB66; --online-soft: #1E2B14; --online-bar: #8CC84B;
+  --thumb: #FFFFFF; --toast-action: #A93D5A; --focus: #F28BA8;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --thumb-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+button:disabled { cursor: default; }
+button:focus { outline: none; }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Header band */
+.band { background: var(--header); color: var(--header-ink); }
+.band-in {
+  max-width: 480px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo {
+  width: 40px; height: 40px; flex: none; border-radius: 11px;
+  background: var(--logo-bg); color: var(--logo-ink);
+  display: grid; place-items: center;
+}
+.logo svg { width: 22px; height: 22px; }
+.titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 1; margin: 0; letter-spacing: 0.01em; }
+.sub { font-size: 13px; color: var(--header-muted); }
+.status { font-size: 13px; color: var(--header-muted); }
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px calc(104px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px;
+  border-radius: 14px; background: var(--tab-bg); border: 1px solid var(--well-line);
+}
+.tabs button { height: 42px; border-radius: 10px; font-weight: 600; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--tab-on); color: var(--tab-on-ink); box-shadow: var(--shadow); }
+
+.view { display: flex; flex-direction: column; gap: 14px; }
+
+/* Day and month switcher */
+.daybar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  display: grid; place-items: center;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.daypick, .monthname {
+  position: relative; height: 44px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden;
+}
+.daypick input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; border: 0; font-size: 16px; cursor: pointer;
+}
+.daypick input:focus { outline: none; }
+.daypick:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tag {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--green-text); background: var(--green-soft); padding: 3px 7px; border-radius: 6px;
+}
+
+/* Totals box */
+.hero {
+  background: var(--hero); color: var(--ink);
+  border-radius: 20px; padding: 18px;
+  display: grid; gap: 12px;
+}
+.hero-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.hero-label { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hero-count { font-size: 14px; color: var(--muted); }
+.hero-big { font-family: var(--font-display); font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: 0.005em; }
+.hero-big.bump { animation: bump 0.35s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.split { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--track); }
+.split i { display: block; height: 100%; transition: width 0.25s ease; }
+.split .c { background: var(--cash-bar); }
+.split .o { background: var(--online-bar); }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.legend div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.legend .k { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.legend .k::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+.legend .kc::before { background: var(--cash-bar); }
+.legend .ko::before { background: var(--online-bar); }
+.legend .v { font-size: 20px; font-weight: 600; }
+.hero-meta { font-size: 14px; color: var(--muted); }
+
+/* Add tip box */
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow);
+  padding: 16px; display: grid; gap: 14px;
+}
+.card.is-cash { --active-bar: var(--cash-bar); }
+.card.is-online { --active-bar: var(--online-bar); }
+.seg {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px;
+  background: var(--surface-2); border: 1px solid var(--well-line); border-radius: 14px;
+}
+.seg button {
+  height: 46px; min-width: 0; padding: 0 4px; border-radius: 10px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 16px; font-weight: 600; white-space: nowrap;
+}
+.seg svg { width: 18px; height: 18px; flex: none; }
+.seg button[aria-checked="true"] { background: var(--primary); color: var(--primary-ink); box-shadow: var(--shadow); }
+
+.readout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.fine {
+  height: 42px; min-width: 62px; padding: 0 10px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--well-line); color: var(--ink); font-weight: 600; font-size: 15px;
+}
+.fine:disabled { opacity: 0.4; }
+.amount { font-family: var(--font-display); font-weight: 700; font-size: 50px; line-height: 1; text-align: center; color: var(--ink); }
+
+.slider {
+  --r: 14px; --p: 0;
+  position: relative; height: 58px;
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+}
+.slider:focus { outline: none; }
+.slider.drag { cursor: grabbing; }
+.slider .track {
+  position: absolute; left: var(--r); right: var(--r); top: 16px; height: 6px;
+  border-radius: 3px; background: var(--track); overflow: hidden;
+}
+.slider .fill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); background: var(--active-bar); }
+.slider .thumb {
+  position: absolute; top: 5px; width: 28px; height: 28px; margin-left: -14px;
+  left: calc(var(--r) + (100% - 2 * var(--r)) * var(--p));
+  border-radius: 50%; background: var(--thumb); box-shadow: var(--thumb-shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.slider.drag .thumb { transform: scale(1.1); }
+.slider:focus-visible .thumb { box-shadow: var(--thumb-shadow), 0 0 0 4px var(--focus); }
+.ticks { position: absolute; left: var(--r); right: var(--r); top: 34px; height: 22px; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 4px; margin-left: -0.5px; background: var(--muted); opacity: 0.45; }
+.ticks span { position: absolute; top: 7px; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+.primary {
+  height: 54px; width: 100%; border-radius: 14px;
+  background: var(--primary); color: var(--primary-ink);
+  font-size: 17px; font-weight: 700; transition: transform 0.1s ease;
+}
+.primary:active:not(:disabled) { transform: scale(0.98); }
+.primary:disabled { opacity: 0.4; }
+
+/* Lists */
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 4px; }
+h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 0; }
+.section-head span { font-size: 14px; color: var(--muted); }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+.list > li { border-top: 1px solid var(--line); }
+.list > li:first-child { border-top: 0; }
+.tip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 6px 10px 14px; }
+.tico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; }
+.tico svg { width: 20px; height: 20px; }
+.tico.cash { background: var(--cash-soft); color: var(--cash); }
+.tico.online { background: var(--online-soft); color: var(--online); }
+.tico.both { background: linear-gradient(135deg, var(--cash-soft) 50%, var(--online-soft) 50%); color: var(--ink); }
+.tmeta { display: flex; flex-direction: column; min-width: 0; }
+.tname { font-weight: 600; }
+.time { font-size: 14px; color: var(--muted); }
+.amt { font-weight: 700; font-size: 17px; white-space: nowrap; }
+.del { width: 44px; height: 44px; border-radius: 10px; color: var(--muted); display: grid; place-items: center; }
+.del svg { width: 18px; height: 18px; }
+
+.shiftrow {
+  display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  width: 100%; padding: 13px 14px; text-align: left;
+}
+.sdate { font-weight: 600; white-space: nowrap; }
+.bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar .fillw { display: flex; height: 100%; border-radius: 4px; overflow: hidden; }
+.bar .c { background: var(--cash-bar); }
+.bar .o { background: var(--online-bar); }
+.bar i { display: block; height: 100%; }
+
+.empty {
+  margin: 0; padding: 18px 16px; border-radius: 20px;
+  border: 1px dashed var(--well-line); color: var(--muted); text-align: center; line-height: 1.5;
+}
+.note { margin: 4px 0 0; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
+
+/* Toast */
+.toast-wrap {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; justify-content: center; pointer-events: none;
+}
+.toast {
+  pointer-events: auto; width: 100%; max-width: 448px;
+  background: var(--ink); color: var(--bg); border-radius: 14px; box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 16px; min-height: 52px;
+  animation: rise 0.2s ease-out;
+}
+.toast span { flex: 1; min-width: 0; }
+.toast button { color: var(--toast-action); font-weight: 700; padding: 8px 12px; border-radius: 8px; }
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Split tip: one customer, part cash and part online */
+.parts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.part {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0;
+  padding: 10px 12px; border-radius: 12px; text-align: left;
+  background: var(--surface-2); border: 1.5px solid var(--well-line);
+}
+.part .plabel { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.part .plabel::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+.part[data-part="cash"] .plabel::before { background: var(--cash-bar); }
+.part[data-part="online"] .plabel::before { background: var(--online-bar); }
+.part .pval { font-size: 20px; font-weight: 700; color: var(--ink); }
+.part[data-part="cash"][aria-pressed="true"] { border-color: var(--cash-bar); background: var(--cash-soft); }
+.part[data-part="online"][aria-pressed="true"] { border-color: var(--online-bar); background: var(--online-soft); }
+.parts-hint { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Typed amount for tips over 20 € */
+.custom-toggle {
+  justify-self: center; padding: 6px 10px; border-radius: 8px;
+  font-size: 15px; font-weight: 600; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px;
+}
+.custom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.custom input {
+  height: 46px; min-width: 0; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--well-line); background: var(--surface-2); color: var(--ink);
+  font: inherit; font-size: 18px; font-weight: 600;
+}
+.custom input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.custom button { height: 46px; padding: 0 16px; border-radius: 12px; background: var(--primary); color: var(--primary-ink); font-weight: 700; }
+.custom-err { grid-column: 1 / -1; margin: 0; font-size: 14px; color: var(--cash); }
+
+
+/* Backup box (data lives only on this phone) */
+.backup { gap: 10px; }
+.backup-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.backup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.secondary {
+  height: 46px; border-radius: 12px; padding: 0 10px;
+  background: var(--surface-2); border: 1px solid var(--well-line); color: var(--ink);
+  font-size: 15px; font-weight: 600;
+}
+.backup-msg { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="band-in">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 2h4v1.6h-.6v3.1l2.7 3.5c.3.4.5.9.5 1.4V20a2 2 0 0 1-2 2H9.4a2 2 0 0 1-2-2v-8.4c0-.5.2-1 .5-1.4l2.7-3.5V3.6H10z"/></svg>
+      </div>
+      <div class="titles">
+        <h1>Trinkgeld</h1>
+        <span class="sub">Meine Schichten</span>
+      </div>
+    </div>
+    <span class="status" id="status" aria-live="polite"></span>
+  </div>
+</header>
+
+<div class="app">
+
+  <nav class="tabs" role="tablist" aria-label="Ansicht">
+    <button type="button" role="tab" id="tab-shift" aria-controls="view-shift" aria-selected="true">Schicht</button>
+    <button type="button" role="tab" id="tab-month" aria-controls="view-month" aria-selected="false">Monat</button>
+  </nav>
+
+  <!-- Shift view -->
+  <section class="view" id="view-shift" role="tabpanel" aria-labelledby="tab-shift">
+    <div class="daybar">
+      <button type="button" class="icon-btn" id="prevDay" aria-label="Vorheriger Tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <label class="daypick">
+        <span id="dayLabel">Schichttag</span>
+        <span class="tag" id="todayTag">Heute</span>
+        <input type="date" id="dayInput" aria-label="Schichttag wählen">
+      </label>
+      <button type="button" class="icon-btn" id="nextDay" aria-label="Nächster Tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="hero">
+      <div class="hero-top">
+        <span class="hero-label">Schicht gesamt</span>
+        <span class="hero-count num" id="shiftCount">0 Einträge</span>
+      </div>
+      <div class="hero-big num" id="shiftTotal">0,00 €</div>
+      <div class="split" id="shiftSplit" aria-hidden="true"><i class="c"></i><i class="o"></i></div>
+      <div class="legend">
+        <div><span class="k kc">Bargeld</span><span class="v num" id="shiftCash">0,00 €</span></div>
+        <div><span class="k ko">Online</span><span class="v num" id="shiftOnline">0,00 €</span></div>
+      </div>
+    </div>
+
+    <div class="card is-cash" id="addCard">
+      <div class="seg" role="radiogroup" aria-label="Art des Trinkgelds">
+        <button type="button" role="radio" data-type="cash" aria-checked="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>
+          Bargeld
+        </button>
+        <button type="button" role="radio" data-type="online" aria-checked="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+          Online
+        </button>
+        <button type="button" role="radio" data-type="both" aria-checked="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="8" width="11" height="8" rx="1.5"/><circle cx="7" cy="12" r="1.5"/><rect x="15" y="4" width="7.5" height="16" rx="2"/><path d="M17.8 17h2"/></svg>
+          Beides
+        </button>
+      </div>
+
+      <div class="parts" id="parts" hidden>
+        <button type="button" class="part" data-part="cash" aria-pressed="true"><span class="plabel">Bargeld</span><span class="pval num" id="partCash">0,00 €</span></button>
+        <button type="button" class="part" data-part="online" aria-pressed="false"><span class="plabel">Online</span><span class="pval num" id="partOnline">0,00 €</span></button>
+        <p class="parts-hint">Tippe auf Bargeld oder Online und stelle den Betrag mit dem Regler ein.</p>
+      </div>
+
+      <div class="readout">
+        <button type="button" class="fine" id="minus" aria-label="10 Cent weniger">−0,10</button>
+        <output class="amount num" id="amountOut" for="slider">2,00 €</output>
+        <button type="button" class="fine" id="plus" aria-label="10 Cent mehr">+0,10</button>
+      </div>
+
+      <div class="slider" id="slider" role="slider" tabindex="0" aria-label="Trinkgeldbetrag in Euro"
+           aria-valuemin="0" aria-valuemax="20" aria-valuenow="2" aria-valuetext="2,00 €">
+        <div class="track"><div class="fill"></div></div>
+        <div class="thumb"></div>
+        <div class="ticks num" aria-hidden="true">
+          <i style="left:0%"></i><i style="left:25%"></i><i style="left:50%"></i><i style="left:75%"></i><i style="left:100%"></i>
+          <span style="left:0%">0</span>
+          <span style="left:25%">5</span>
+          <span style="left:50%">10</span>
+          <span style="left:75%">15</span>
+          <span style="left:100%">20 €</span>
+        </div>
+      </div>
+
+      <button type="button" class="custom-toggle" id="customToggle" aria-expanded="false" aria-controls="customRow">Mehr als 20 €? Betrag eingeben</button>
+      <form class="custom" id="customRow" hidden novalidate>
+        <input id="customInput" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 25,50" aria-label="Betrag in Euro">
+        <button type="submit">Übernehmen</button>
+        <p class="custom-err" id="customErr" hidden></p>
+      </form>
+
+      <button type="button" class="primary" id="addBtn" disabled>Lädt…</button>
+    </div>
+
+    <div class="section-head">
+      <h2>Einträge dieser Schicht</h2>
+      <span id="listHint"></span>
+    </div>
+    <ul class="list" id="tipList" hidden></ul>
+    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle den Betrag mit dem Regler, tippe auf Bargeld oder Online und dann auf Hinzufügen.</p>
+  </section>
+
+  <!-- Month view -->
+  <section class="view" id="view-month" role="tabpanel" aria-labelledby="tab-month" hidden>
+    <div class="daybar">
+      <button type="button" class="icon-btn" id="prevMonth" aria-label="Vorheriger Monat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="monthname" id="monthLabel">Monat</div>
+      <button type="button" class="icon-btn" id="nextMonth" aria-label="Nächster Monat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="hero">
+      <div class="hero-top">
+        <span class="hero-label">Monat gesamt</span>
+      </div>
+      <div class="hero-big num" id="monthTotal">0,00 €</div>
+      <div class="split" id="monthSplit" aria-hidden="true"><i class="c"></i><i class="o"></i></div>
+      <div class="legend">
+        <div><span class="k kc">Bargeld</span><span class="v num" id="monthCash">0,00 €</span></div>
+        <div><span class="k ko">Online</span><span class="v num" id="monthOnline">0,00 €</span></div>
+      </div>
+      <div class="hero-meta num" id="monthMeta">Noch keine Schichten</div>
+    </div>
+
+    <div class="section-head">
+      <h2>Schichten</h2>
+      <span>Schicht antippen für Details</span>
+    </div>
+    <ul class="list" id="shiftList" hidden></ul>
+    <p class="empty" id="monthEmpty">Keine Trinkgelder in diesem Monat gespeichert.</p>
+
+    <div class="card backup">
+      <h2>Backup</h2>
+      <p class="backup-text">Deine Einträge sind nur auf diesem iPhone gespeichert. Sichere ab und zu ein Backup in der Dateien-App, zum Beispiel einmal im Monat.</p>
+      <div class="backup-actions">
+        <button type="button" class="secondary" id="exportBtn">Backup speichern</button>
+        <button type="button" class="secondary" id="importBtn">Backup laden</button>
+      </div>
+      <input type="file" id="importInput" class="sr-only" accept=".json,application/json" tabindex="-1" aria-hidden="true">
+      <p class="backup-msg" id="backupMsg" role="status" hidden></p>
+    </div>
+  </section>
+
+  <p class="note" id="note">Lädt deine Trinkgelder…</p>
+</div>
+
+<div class="toast-wrap" id="toast" hidden>
+  <div class="toast" role="status" aria-live="polite">
+    <span id="toastMsg"></span>
+    <button type="button" id="toastAction" hidden>Rückgängig</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var MAX_SLIDER = 2000;   // slider range: 0 to 20,00 € (in cents); larger amounts are typed in
+  var STEP = 10;           // slider step: 0,10 €
+  var FINE = 10;           // fine buttons: 0,10 €
+  var MAX_AMOUNT = 20000;  // hard cap per tip: 200,00 €
+
+  var $ = function (id) { return document.getElementById(id); };
+  var eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+  var fmt = function (c) { return eur.format(c / 100); };
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var isoDay = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var fromISO = function (s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2] || 1); };
+  var today = function () { return isoDay(new Date()); };
+  var fDay = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  var fDayShort = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  var fMonth = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' });
+  var fTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
+  var LABEL = { cash: 'Bargeld', online: 'Online', both: 'Bargeld + Online' };
+  document.documentElement.lang = 'de';
+  var ICON = {
+    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
+    online: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg>',
+    both: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="8" width="11" height="8" rx="1.5"/><circle cx="7" cy="12" r="1.5"/><rect x="15" y="4" width="7.5" height="16" rx="2"/><path d="M17.8 17h2"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+  };
+
+  var state = {
+    shifts: {},          // "YYYY-MM-DD" -> { date, tips: [{ id, amount (cents), type, at }] }
+    day: today(),
+    dayIsAuto: true,
+    month: today().slice(0, 7),
+    tab: 'shift',
+    amount: 200,
+    type: 'cash',
+    split: { cash: 200, online: 200 },   // used when type is 'both'
+    part: 'cash',                         // which part of a split tip the slider edits
+    mode: 'loading',     // loading | cloud | local | private
+    loaded: false,
+    error: ''
+  };
+
+  /* ---------- Per-device conveniences (last amount and type) ---------- */
+  var PREFS = 'trinkgeld.prefs.v1';
+  var LOCAL = 'trinkgeld.data.v1';
+  function readLS(k) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+  function writeLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  var prefs = readLS(PREFS);
+  if (prefs) {
+    if (Number.isInteger(prefs.amount) && prefs.amount >= 0 && prefs.amount <= MAX_AMOUNT) state.amount = prefs.amount;
+    if (prefs.type === 'cash' || prefs.type === 'online' || prefs.type === 'both') state.type = prefs.type;
+    if (prefs.split && typeof prefs.split === 'object') {
+      ['cash', 'online'].forEach(function (k) {
+        var v = prefs.split[k];
+        if (Number.isInteger(v) && v >= 0 && v <= MAX_AMOUNT) state.split[k] = v;
+      });
+    }
+  }
+  var prefTimer = 0;
+  function savePrefs() {
+    clearTimeout(prefTimer);
+    prefTimer = setTimeout(function () { writeLS(PREFS, { amount: state.amount, type: state.type, split: state.split }); }, 400);
+  }
+
+  /* ---------- Data helpers ---------- */
+  function cleanTip(t) {
+    if (!t || typeof t !== 'object') return null;
+    var id = typeof t.id === 'string' ? t.id.slice(0, 40) : Math.random().toString(36).slice(2, 10);
+    var at = typeof t.at === 'string' ? t.at.slice(0, 40) : '';
+    if (t.type === 'both') {
+      var c = Math.round(Number(t.cash)), o = Math.round(Number(t.online));
+      if (!isFinite(c) || !isFinite(o) || c < 0 || o < 0 || c + o <= 0 || c + o > 1000000) return null;
+      return { id: id, amount: c + o, type: 'both', cash: c, online: o, at: at };
+    }
+    var amount = Math.round(Number(t.amount));
+    if (!isFinite(amount) || amount <= 0 || amount > 1000000) return null;
+    var type = t.type === 'cash' || t.type === 'online' ? t.type : null;
+    if (!type) return null;
+    return { id: id, amount: amount, type: type, at: at };
+  }
+  function cleanShifts(obj) {
+    var out = {};
+    Object.keys(obj || {}).forEach(function (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      var list = obj[date] && Array.isArray(obj[date].tips) ? obj[date].tips : [];
+      var tips = list.map(cleanTip).filter(Boolean);
+      if (tips.length) out[date] = { date: date, tips: tips };
+    });
+    return out;
+  }
+  function sum(tips) {
+    var cash = 0, online = 0;
+    tips.forEach(function (t) {
+      if (t.type === 'both') { cash += t.cash; online += t.online; }
+      else if (t.type === 'cash') cash += t.amount;
+      else online += t.amount;
+    });
+    return { cash: cash, online: online, total: cash + online, count: tips.length };
+  }
+  function tipsWord(n) { return n === 1 ? '1 Eintrag' : n + ' Einträge'; }
+  function canWrite() { return state.mode === 'local' || (state.mode === 'cloud' && state.loaded); }
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function describe(t) {
+    return t.type === 'both'
+      ? fmt(t.cash) + ' Bargeld + ' + fmt(t.online) + ' Online'
+      : fmt(t.amount) + ' ' + LABEL[t.type];
+  }
+  function curAmount() { return state.type === 'both' ? state.split[state.part] : state.amount; }
+  function makeTip() {
+    var at = new Date().toISOString();
+    if (state.type === 'both') {
+      var c = state.split.cash, o = state.split.online;
+      if (c > 0 && o > 0) return { id: newId(), amount: c + o, type: 'both', cash: c, online: o, at: at };
+      if (c > 0) return { id: newId(), amount: c, type: 'cash', at: at };
+      if (o > 0) return { id: newId(), amount: o, type: 'online', at: at };
+      return null;
+    }
+    return state.amount > 0 ? { id: newId(), amount: state.amount, type: state.type, at: at } : null;
+  }
+
+  /* ---------- Saving ---------- */
+  var db = null;
+  var pending = {};
+  var chains = {};
+  var saving = 0;
+
+  function persist(date) {
+    if (state.mode === 'local') {
+      if (!writeLS(LOCAL, state.shifts)) toast('Speichern auf diesem Gerät nicht möglich. Der Browserspeicher ist eventuell voll oder blockiert.');
+      return;
+    }
+    if (state.mode !== 'cloud' || !db) return;
+    pending[date] = (pending[date] || 0) + 1;
+    saving++;
+    renderStatus();
+    var write = function () {
+      var ref = db.doc('shifts/' + date);
+      var s = state.shifts[date];
+      if (s && s.tips.length) {
+        return ref.set({ date: date, tips: s.tips.map(function (t) {
+          var o = { id: t.id, amount: t.amount, type: t.type, at: t.at };
+          if (t.type === 'both') { o.cash = t.cash; o.online = t.online; }
+          return o;
+        }) });
+      }
+      return ref.delete();
+    };
+    var attempt = function () {
+      return write().catch(function (err) {
+        if (err && err.code === 'unavailable') {
+          return new Promise(function (r) { setTimeout(r, 400 + Math.random() * 800); }).then(write);
+        }
+        throw err;
+      });
+    };
+    chains[date] = (chains[date] || Promise.resolve())
+      .catch(function () {})
+      .then(attempt)
+      .then(null, function (err) {
+        if (err && err.code === 'quota_exceeded') toast('Der Speicher ist voll. Lösche ein paar alte Einträge und versuche es erneut.');
+        else toast('Speichern fehlgeschlagen. Prüfe deine Internetverbindung und versuche es erneut.');
+      })
+      .then(function () {
+        pending[date]--;
+        saving--;
+        renderStatus();
+      });
+  }
+
+  function subscribe() {
+    db.collection('shifts').onSnapshot(function (snap) {
+      var raw = {};
+      snap.docs.forEach(function (d) { var v = d.data(); if (v) raw[d.id] = v; });
+      var next = cleanShifts(raw);
+      Object.keys(pending).forEach(function (date) {
+        if (pending[date] > 0) {
+          if (state.shifts[date]) next[date] = state.shifts[date]; else delete next[date];
+        }
+      });
+      state.shifts = next;
+      state.loaded = true;
+      render();
+    }, function () {
+      state.error = 'Deine Trinkgelder konnten nicht geladen werden. Schließe die Seite und öffne sie erneut.';
+      render();
+    });
+  }
+
+  /* ---------- Actions ---------- */
+  function setAmount(a) {
+    a = Math.max(0, Math.min(MAX_AMOUNT, Math.round(a)));
+    if (a === curAmount()) return;
+    if (state.type === 'both') {
+      var sp = Object.assign({}, state.split);
+      sp[state.part] = a;
+      state.split = sp;
+    } else {
+      state.amount = a;
+    }
+    renderAmount();
+    savePrefs();
+  }
+  function setType(type) {
+    state.type = type;
+    renderAmount();
+    savePrefs();
+  }
+  function addTip() {
+    if (!canWrite()) return;
+    var date = state.day;
+    var tip = makeTip();
+    if (!tip) return;
+    var cur = state.shifts[date];
+    var next = Object.assign({}, state.shifts);
+    next[date] = { date: date, tips: (cur ? cur.tips : []).concat(tip) };
+    state.shifts = next;
+    persist(date);
+    render();
+    var big = $('shiftTotal');
+    big.classList.remove('bump'); void big.offsetWidth; big.classList.add('bump');
+    toast(describe(tip) + ' hinzugefügt');
+  }
+  function removeTip(date, id) {
+    var s = state.shifts[date];
+    if (!s) return;
+    var idx = -1;
+    s.tips.forEach(function (t, i) { if (t.id === id) idx = i; });
+    if (idx < 0) return;
+    var tip = s.tips[idx];
+    var tips = s.tips.filter(function (t) { return t.id !== id; });
+    var next = Object.assign({}, state.shifts);
+    if (tips.length) next[date] = { date: date, tips: tips }; else delete next[date];
+    state.shifts = next;
+    persist(date);
+    render();
+    toast(describe(tip) + ' gelöscht', 'Rückgängig', function () {
+      var c = state.shifts[date];
+      var list = c ? c.tips.slice() : [];
+      if (list.some(function (t) { return t.id === tip.id; })) return;
+      list.splice(Math.min(idx, list.length), 0, tip);
+      var n = Object.assign({}, state.shifts);
+      n[date] = { date: date, tips: list };
+      state.shifts = n;
+      persist(date);
+      render();
+    });
+  }
+  function moveDay(delta) {
+    var d = fromISO(state.day);
+    d.setDate(d.getDate() + delta);
+    state.day = isoDay(d);
+    state.dayIsAuto = false;
+    render();
+  }
+  function moveMonth(delta) {
+    var p = state.month.split('-').map(Number);
+    var d = new Date(p[0], p[1] - 1 + delta, 1);
+    state.month = d.getFullYear() + '-' + pad(d.getMonth() + 1);
+    render();
+  }
+  function setTab(tab) {
+    if (tab === 'month' && state.tab !== 'month') state.month = state.day.slice(0, 7);
+    state.tab = tab;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- Toast ---------- */
+  var toastTimer = 0;
+  function toast(msg, actionLabel, action) {
+    var wrap = $('toast');
+    var btn = $('toastAction');
+    $('toastMsg').textContent = msg;
+    if (actionLabel) {
+      btn.hidden = false;
+      btn.textContent = actionLabel;
+      btn.onclick = function () { hideToast(); action(); };
+    } else {
+      btn.hidden = true;
+      btn.onclick = null;
+    }
+    wrap.hidden = false;
+    var inner = wrap.firstElementChild;
+    inner.style.animation = 'none'; void inner.offsetWidth; inner.style.animation = '';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, actionLabel ? 5000 : 2200);
+  }
+  function hideToast() { $('toast').hidden = true; }
+
+  /* ---------- Rendering ---------- */
+  function setSplit(el, cash, online) {
+    var total = cash + online;
+    el.querySelector('.c').style.width = total ? (cash / total * 100) + '%' : '0%';
+    el.querySelector('.o').style.width = total ? (online / total * 100) + '%' : '0%';
+  }
+
+  function renderTabs() {
+    var isShift = state.tab === 'shift';
+    $('tab-shift').setAttribute('aria-selected', String(isShift));
+    $('tab-month').setAttribute('aria-selected', String(!isShift));
+    $('view-shift').hidden = !isShift;
+    $('view-month').hidden = isShift;
+  }
+
+  function renderShift() {
+    $('dayLabel').textContent = fDay.format(fromISO(state.day));
+    $('dayInput').value = state.day;
+    $('todayTag').hidden = state.day !== today();
+
+    var tips = state.shifts[state.day] ? state.shifts[state.day].tips : [];
+    var s = sum(tips);
+    $('shiftTotal').textContent = fmt(s.total);
+    $('shiftCash').textContent = fmt(s.cash);
+    $('shiftOnline').textContent = fmt(s.online);
+    $('shiftCount').textContent = tipsWord(s.count);
+    setSplit($('shiftSplit'), s.cash, s.online);
+    $('listHint').textContent = s.count ? 'Neueste zuerst' : '';
+
+    var list = $('tipList');
+    list.textContent = '';
+    var sorted = tips.slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
+    sorted.forEach(function (t) {
+      var li = document.createElement('li');
+      li.className = 'tip';
+      li.innerHTML =
+        '<span class="tico ' + t.type + '" aria-hidden="true">' + ICON[t.type] + '</span>' +
+        '<span class="tmeta"><span class="tname"></span><span class="time num"></span></span>' +
+        '<span class="amt num"></span>' +
+        '<button type="button" class="del">' + ICON.x + '</button>';
+      li.querySelector('.tname').textContent = LABEL[t.type];
+      var when = t.at ? new Date(t.at) : null;
+      var timeText = when && !isNaN(when) && isoDay(when) === state.day ? fTime.format(when) : '';
+      var detail = t.type === 'both' ? fmt(t.cash) + ' Bargeld · ' + fmt(t.online) + ' Online' : '';
+      li.querySelector('.time').textContent = [detail, timeText].filter(Boolean).join(' · ');
+      li.querySelector('.amt').textContent = fmt(t.amount);
+      var del = li.querySelector('.del');
+      del.setAttribute('aria-label', describe(t) + ' löschen');
+      del.hidden = !canWrite();
+      del.addEventListener('click', function () { removeTip(state.day, t.id); });
+      list.appendChild(li);
+    });
+    list.hidden = !tips.length;
+    $('shiftEmpty').hidden = !!tips.length;
+    $('shiftEmpty').textContent = state.mode === 'private'
+      ? 'Keine Trinkgelder vorhanden.'
+      : 'Noch kein Trinkgeld in dieser Schicht. Wähle den Betrag mit dem Regler, tippe auf Bargeld oder Online und dann auf Hinzufügen.';
+    $('addCard').hidden = state.mode === 'private';
+  }
+
+  function renderMonth() {
+    var p = state.month.split('-').map(Number);
+    var monthName = fMonth.format(new Date(p[0], p[1] - 1, 1));
+    $('monthLabel').textContent = monthName;
+
+    var dates = Object.keys(state.shifts).filter(function (k) { return k.slice(0, 7) === state.month; }).sort().reverse();
+    var cash = 0, online = 0, count = 0, max = 0;
+    var rows = dates.map(function (date) {
+      var s = sum(state.shifts[date].tips);
+      cash += s.cash; online += s.online; count += s.count;
+      if (s.total > max) max = s.total;
+      return { date: date, s: s };
+    });
+    var total = cash + online;
+    $('monthTotal').textContent = fmt(total);
+    $('monthCash').textContent = fmt(cash);
+    $('monthOnline').textContent = fmt(online);
+    setSplit($('monthSplit'), cash, online);
+    $('monthMeta').textContent = dates.length
+      ? dates.length + (dates.length === 1 ? ' Schicht' : ' Schichten') + ' · ' + tipsWord(count) + ' · Ø ' + fmt(Math.round(total / dates.length)) + ' pro Schicht'
+      : 'Noch keine Schichten';
+
+    var list = $('shiftList');
+    list.textContent = '';
+    rows.forEach(function (r) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'shiftrow';
+      b.innerHTML =
+        '<span class="sdate num"></span>' +
+        '<span class="bar" aria-hidden="true"><span class="fillw"><i class="c"></i><i class="o"></i></span></span>' +
+        '<span class="amt num"></span>';
+      var d = fromISO(r.date);
+      b.querySelector('.sdate').textContent = fDayShort.format(d);
+      b.querySelector('.amt').textContent = fmt(r.s.total);
+      b.querySelector('.fillw').style.width = (max ? r.s.total / max * 100 : 0) + '%';
+      b.querySelector('.c').style.width = (r.s.total ? r.s.cash / r.s.total * 100 : 0) + '%';
+      b.querySelector('.o').style.width = (r.s.total ? r.s.online / r.s.total * 100 : 0) + '%';
+      b.setAttribute('aria-label', fDay.format(d) + ': ' + fmt(r.s.total) + ', Bargeld ' + fmt(r.s.cash) + ', Online ' + fmt(r.s.online) + '. Schicht öffnen.');
+      b.addEventListener('click', function () {
+        state.day = r.date;
+        state.dayIsAuto = false;
+        setTab('shift');
+      });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+    list.hidden = !rows.length;
+    $('monthEmpty').hidden = !!rows.length;
+    $('monthEmpty').textContent = 'Keine Trinkgelder im ' + monthName + ' gespeichert.';
+  }
+
+  var slider = $('slider');
+  function renderAmount() {
+    var a = curAmount();
+    $('amountOut').textContent = fmt(a);
+    slider.style.setProperty('--p', String(Math.min(a, MAX_SLIDER) / MAX_SLIDER));
+    slider.setAttribute('aria-valuenow', (Math.min(a, MAX_SLIDER) / 100).toFixed(2));
+    slider.setAttribute('aria-valuetext', fmt(a));
+    $('minus').disabled = a <= 0;
+    $('plus').disabled = a >= MAX_AMOUNT;
+
+    var card = $('addCard');
+    var kind = state.type === 'both' ? state.part : state.type;
+    card.classList.toggle('is-cash', kind === 'cash');
+    card.classList.toggle('is-online', kind === 'online');
+    $('parts').hidden = state.type !== 'both';
+    $('partCash').textContent = fmt(state.split.cash);
+    $('partOnline').textContent = fmt(state.split.online);
+    Array.prototype.forEach.call(document.querySelectorAll('.part'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-part') === state.part));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
+      b.setAttribute('aria-checked', String(b.getAttribute('data-type') === state.type));
+    });
+
+    var add = $('addBtn');
+    if (state.mode === 'loading' || (state.mode === 'cloud' && !state.loaded)) {
+      add.disabled = true;
+      add.textContent = 'Lädt…';
+    } else {
+      var preview = makeTip();
+      add.disabled = !preview || !canWrite();
+      add.textContent = !preview ? 'Betrag mit dem Regler wählen'
+        : preview.type === 'both' ? fmt(preview.amount) + ' hinzufügen'
+        : describe(preview) + ' hinzufügen';
+    }
+  }
+
+  function renderStatus() {
+    $('status').textContent = saving > 0 ? 'Speichert…' : '';
+  }
+
+  function renderNote() {
+    var t;
+    if (state.error) t = state.error;
+    else if (state.mode === 'cloud') t = state.loaded ? 'Gespeichert in deinem Claude-Konto. Dieselben Einträge siehst du in der Claude-App und in Safari.' : 'Lädt deine Trinkgelder…';
+    else if (state.mode === 'local') t = 'Gespeichert auf diesem iPhone. Funktioniert auch ohne Internet.';
+    else if (state.mode === 'private') t = 'Dieser Tracker ist privat. Nur der Besitzer kann Trinkgelder sehen und hinzufügen.';
+    else t = 'Lädt deine Trinkgelder…';
+    $('note').textContent = t;
+  }
+
+  function render() {
+    renderTabs();
+    renderShift();
+    renderMonth();
+    renderAmount();
+    renderStatus();
+    renderNote();
+  }
+
+  /* ---------- Slider input: drag anywhere on the track ---------- */
+  var dragging = false;
+  function setFromX(x) {
+    var r = slider.getBoundingClientRect();
+    var R = 14;
+    var frac = (x - r.left - R) / Math.max(1, r.width - 2 * R);
+    frac = Math.max(0, Math.min(1, frac));
+    setAmount(Math.round(frac * MAX_SLIDER / STEP) * STEP);
+  }
+  slider.addEventListener('pointerdown', function (e) {
+    if (e.button !== undefined && e.button > 0) return;
+    dragging = true;
+    try { slider.setPointerCapture(e.pointerId); } catch (err) {}
+    slider.classList.add('drag');
+    setFromX(e.clientX);
+    e.preventDefault();
+  });
+  slider.addEventListener('pointermove', function (e) { if (dragging) setFromX(e.clientX); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
+    slider.addEventListener(ev, function () { dragging = false; slider.classList.remove('drag'); });
+  });
+  slider.addEventListener('keydown', function (e) {
+    var a = curAmount();
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowUp': a = Math.floor(a / STEP) * STEP + STEP; break;
+      case 'ArrowLeft': case 'ArrowDown': a = Math.ceil(a / STEP) * STEP - STEP; break;
+      case 'PageUp': a += 500; break;
+      case 'PageDown': a -= 500; break;
+      case 'Home': a = 0; break;
+      case 'End': a = MAX_SLIDER; break;
+      default: return;
+    }
+    e.preventDefault();
+    setAmount(a);
+  });
+
+  /* ---------- Other controls ---------- */
+  $('minus').addEventListener('click', function () { setAmount(curAmount() - FINE); });
+  $('plus').addEventListener('click', function () { setAmount(curAmount() + FINE); });
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
+    b.addEventListener('click', function () { setType(b.getAttribute('data-type')); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.part'), function (b) {
+    b.addEventListener('click', function () { state.part = b.getAttribute('data-part'); renderAmount(); });
+  });
+  $('addBtn').addEventListener('click', addTip);
+  $('prevDay').addEventListener('click', function () { moveDay(-1); });
+  $('nextDay').addEventListener('click', function () { moveDay(1); });
+  $('prevMonth').addEventListener('click', function () { moveMonth(-1); });
+  $('nextMonth').addEventListener('click', function () { moveMonth(1); });
+  $('tab-shift').addEventListener('click', function () { setTab('shift'); });
+  $('tab-month').addEventListener('click', function () { setTab('month'); });
+  ['change', 'input'].forEach(function (ev) {
+    $('dayInput').addEventListener(ev, function (e) {
+      var v = e.target.value;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v !== state.day) {
+        state.day = v;
+        state.dayIsAuto = v === today();
+        render();
+      }
+    });
+  });
+  // Coming back to the app on a new day jumps to today's shift.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && state.dayIsAuto && state.day !== today()) {
+      state.day = today();
+      render();
+    }
+  });
+
+  /* ---------- Typed amount (over 20 €) ---------- */
+  $('customToggle').addEventListener('click', function () {
+    var row = $('customRow');
+    var open = row.hidden;
+    row.hidden = !open;
+    $('customToggle').setAttribute('aria-expanded', String(open));
+    $('customErr').hidden = true;
+    if (open) {
+      var inp = $('customInput');
+      inp.value = curAmount() > 0 ? (curAmount() / 100).toFixed(2).replace('.', ',') : '';
+      inp.focus();
+      inp.select();
+    }
+  });
+  $('customRow').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = $('customInput').value.replace(/[\s€]/g, '');
+    var err = $('customErr');
+    if (!/^\d{1,3}([.,]\d{1,2})?$/.test(v)) {
+      err.textContent = 'Bitte einen Betrag wie 25,50 eingeben.';
+      err.hidden = false;
+      return;
+    }
+    var cents = Math.round(parseFloat(v.replace(',', '.')) * 100);
+    if (cents <= 0) {
+      err.textContent = 'Der Betrag muss größer als 0 sein.';
+      err.hidden = false;
+      return;
+    }
+    if (cents > MAX_AMOUNT) {
+      err.textContent = 'Höchstens ' + fmt(MAX_AMOUNT) + ' pro Trinkgeld.';
+      err.hidden = false;
+      return;
+    }
+    err.hidden = true;
+    setAmount(cents);
+    $('customRow').hidden = true;
+    $('customToggle').setAttribute('aria-expanded', 'false');
+    $('customInput').blur();
+  });
+
+  /* ---------- Backup: save to and load from a file ---------- */
+  function backupMsg(text) {
+    var el = $('backupMsg');
+    el.textContent = text;
+    el.hidden = false;
+  }
+  function downloadBackup(json, name) {
+    var url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    backupMsg('Backup erstellt: ' + name);
+  }
+  function exportBackup() {
+    var count = 0;
+    Object.keys(state.shifts).forEach(function (d) { count += state.shifts[d].tips.length; });
+    if (!count) { backupMsg('Noch keine Einträge zum Sichern.'); return; }
+    var json = JSON.stringify({ app: 'trinkgeld', version: 1, exportedAt: new Date().toISOString(), shifts: state.shifts }, null, 2);
+    var name = 'trinkgeld-backup-' + today() + '.json';
+    var file = null;
+    try { file = new File([json], name, { type: 'application/json' }); } catch (e) { file = null; }
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'Trinkgeld Backup' })
+        .then(function () { backupMsg('Backup erstellt (' + tipsWord(count) + ').'); })
+        .catch(function (err) { if (!err || err.name !== 'AbortError') downloadBackup(json, name); });
+      return;
+    }
+    downloadBackup(json, name);
+  }
+  function importBackup(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(String(reader.result)); } catch (e) { data = null; }
+      var raw = data && typeof data === 'object' ? (data.shifts && typeof data.shifts === 'object' ? data.shifts : data) : null;
+      var incoming = raw ? cleanShifts(raw) : {};
+      if (!Object.keys(incoming).length) {
+        backupMsg('Diese Datei ist kein Trinkgeld-Backup oder enthält keine Einträge.');
+        return;
+      }
+      var next = Object.assign({}, state.shifts), added = 0;
+      Object.keys(incoming).forEach(function (date) {
+        var tips = next[date] ? next[date].tips.slice() : [];
+        var seen = {};
+        tips.forEach(function (t) { seen[t.id] = true; });
+        incoming[date].tips.forEach(function (t) {
+          if (!seen[t.id]) { tips.push(t); seen[t.id] = true; added++; }
+        });
+        if (tips.length) next[date] = { date: date, tips: tips };
+      });
+      state.shifts = next;
+      if (!writeLS(LOCAL, state.shifts)) {
+        backupMsg('Speichern auf diesem Gerät nicht möglich. Der Speicher ist eventuell voll.');
+        return;
+      }
+      render();
+      backupMsg(added ? tipsWord(added) + ' importiert.' : 'Alle Einträge aus diesem Backup sind schon vorhanden.');
+    };
+    reader.onerror = function () { backupMsg('Die Datei konnte nicht gelesen werden.'); };
+    reader.readAsText(file);
+  }
+  $('exportBtn').addEventListener('click', exportBackup);
+  $('importBtn').addEventListener('click', function () { $('importInput').click(); });
+  $('importInput').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (f) importBackup(f);
+    e.target.value = '';
+  });
+
+  /* ---------- Offline support ---------- */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    });
+  }
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(function () {});
+  }
+
+  /* ---------- Start ---------- */
+  render();
+
+  function useLocal() {
+    state.mode = 'local';
+    state.shifts = cleanShifts(readLS(LOCAL));
+    state.loaded = true;
+    render();
+  }
+
+  useLocal();
+})();
+</script>
+</body>
+</html>
