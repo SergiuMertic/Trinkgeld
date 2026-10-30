@@ -461,8 +461,9 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
         <span class="trip-sum num" id="tripSum">Noch keine Einträge in dieser Tour</span>
       </div>
       <button type="button" class="trip-end" id="tripEnd" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-        Tour beenden
+        <svg id="tripIconEnd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        <svg id="tripIconResume" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>
+        <span id="tripEndText">Tour beenden</span>
       </button>
     </div>
 
@@ -877,7 +878,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     state.shifts = next;
     persist(date);
     render();
-    toast('Tour ' + cur + ' beendet: ' + fmt(total) + '. Tour ' + (cur + 1) + ' läuft.', 'Rückgängig', function () {
+    toast('Tour ' + cur + ' beendet: ' + fmt(total), 'Rückgängig', function () {
       var c = state.shifts[date];
       if (!c || currentTrip(date) !== cur + 1) return;
       if (c.tips.some(function (t) { return tripOf(t) === cur + 1; })) return;
@@ -889,6 +890,20 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       persist(date);
       render();
     });
+  }
+  function resumeTrip() {
+    if (!canWrite()) return;
+    var date = state.day;
+    var s = state.shifts[date];
+    var cur = currentTrip(date);
+    if (!s || cur <= 1) return;
+    if (s.tips.some(function (t) { return tripOf(t) === cur; })) return;
+    var next = Object.assign({}, state.shifts);
+    next[date] = shiftWith(date, s.tips, cur - 1);
+    state.shifts = next;
+    persist(date);
+    render();
+    toast('Tour ' + (cur - 1) + ' geht weiter');
   }
   function moveDay(delta) {
     var d = fromISO(state.day);
@@ -961,9 +976,17 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('shiftOnline').textContent = fmt(s.online);
     $('shiftCount').textContent = tipsWord(s.count) + (nTrips > 1 ? ' · ' + tripsWord(nTrips) : '');
     var cs = sum(tips.filter(function (t) { return tripOf(t) === curTrip; }));
-    $('tripLabel').textContent = 'Tour ' + curTrip;
-    $('tripSum').textContent = cs.count ? fmt(cs.total) + ' in dieser Tour' : 'Noch keine Einträge in dieser Tour';
-    $('tripEnd').disabled = !cs.count || !canWrite();
+    var ended = !cs.count && curTrip > 1;
+    var ps = ended ? sum(tips.filter(function (t) { return tripOf(t) === curTrip - 1; })) : null;
+    $('tripLabel').textContent = ended ? 'Tour ' + (curTrip - 1) + ' beendet' : 'Tour ' + curTrip;
+    $('tripSum').textContent = ended
+      ? fmt(ps.total) + ' · Nächster Eintrag startet Tour ' + curTrip
+      : cs.count ? fmt(cs.total) + ' in dieser Tour' : 'Noch keine Einträge in dieser Tour';
+    $('tripEndText').textContent = ended ? 'Fortsetzen' : 'Tour beenden';
+    $('tripEnd').setAttribute('aria-label', ended ? 'Tour ' + (curTrip - 1) + ' fortsetzen' : 'Tour ' + curTrip + ' beenden');
+    $('tripIconEnd').toggleAttribute('hidden', ended);
+    $('tripIconResume').toggleAttribute('hidden', !ended);
+    $('tripEnd').disabled = !canWrite() || (!cs.count && !ended);
     $('tripbar').hidden = state.mode === 'private';
     setSplit($('shiftSplit'), s.cash, s.online);
     $('listHint').textContent = s.count ? 'Neueste zuerst' : '';
@@ -974,7 +997,6 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     var groups = {};
     tips.forEach(function (t) { var k = tripOf(t); (groups[k] = groups[k] || []).push(t); });
     var nums = Object.keys(groups).map(Number);
-    if (tips.length && nums.indexOf(curTrip) < 0) nums.push(curTrip);
     nums.sort(function (a, b) { return b - a; });
     var isToday = state.day === today();
     nums.forEach(function (n) {
@@ -1194,7 +1216,12 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     b.addEventListener('click', function () { state.part = b.getAttribute('data-part'); renderAmount(); });
   });
   $('addBtn').addEventListener('click', addTip);
-  $('tripEnd').addEventListener('click', endTrip);
+  $('tripEnd').addEventListener('click', function () {
+    var s = state.shifts[state.day];
+    var cur = currentTrip(state.day);
+    var hasTips = !!s && s.tips.some(function (t) { return tripOf(t) === cur; });
+    if (hasTips) endTrip(); else resumeTrip();
+  });
   $('prevDay').addEventListener('click', function () { moveDay(-1); });
   $('nextDay').addEventListener('click', function () { moveDay(1); });
   $('prevMonth').addEventListener('click', function () { moveMonth(-1); });
