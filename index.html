@@ -234,23 +234,25 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
 
 .amount { display: block; font-family: var(--font-display); font-weight: 700; font-size: 50px; line-height: 1; text-align: center; color: var(--ink); padding: 4px 0; }
 .amount.bump { animation: bump 0.25s ease-out; }
-.coins { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.coin {
-  height: 54px; min-width: 0; border-radius: 12px;
+.amount-row { position: relative; }
+.clear-amt {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; color: var(--muted); background: var(--surface-2);
+}
+.clear-amt svg { width: 18px; height: 18px; }
+.keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.key {
+  height: 56px; min-width: 0; border-radius: 12px;
   background: var(--surface-2); border: 1px solid var(--well-line); color: var(--ink);
-  font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums;
-  touch-action: manipulation; transition: transform 0.08s ease;
+  font-family: var(--font-display); font-size: 26px; font-weight: 600;
+  display: grid; place-items: center;
+  touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  transition: transform 0.06s ease;
 }
-.coin.cent { font-size: 16px; font-weight: 600; }
-.coin:active { transform: scale(0.93); background: var(--hero); }
-.coin-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.tool {
-  height: 42px; border-radius: 12px; border: 1px solid var(--well-line);
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  color: var(--muted); font-size: 15px; font-weight: 600; touch-action: manipulation;
-}
-.tool svg { width: 17px; height: 17px; }
-.tool:disabled { opacity: 0.4; }
+.key:active { transform: scale(0.94); background: var(--hero); }
+.key.fn { font-family: var(--font-body); font-size: 20px; color: var(--muted); }
+.key svg { width: 24px; height: 24px; }
 
 .primary {
   height: 54px; width: 100%; border-radius: 14px;
@@ -362,23 +364,6 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 .part[data-part="online"][aria-pressed="true"] { border-color: var(--online-bar); background: var(--online-soft); }
 .parts-hint { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--muted); }
 
-/* Typed amount for tips over 20 € */
-.custom-toggle {
-  justify-self: center; padding: 6px 10px; border-radius: 8px;
-  font-size: 15px; font-weight: 600; color: var(--ink);
-  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px;
-}
-.custom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.custom input {
-  height: 46px; min-width: 0; padding: 0 14px; border-radius: 12px;
-  border: 1px solid var(--well-line); background: var(--surface-2); color: var(--ink);
-  font: inherit; font-size: 18px; font-weight: 600;
-}
-.custom input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
-.custom button { height: 46px; padding: 0 16px; border-radius: 12px; background: var(--primary); color: var(--primary-ink); font-weight: 700; }
-.custom-err { grid-column: 1 / -1; margin: 0; font-size: 14px; color: var(--cash); }
-
-
 /* Backup box (data lives only on this phone) */
 .backup { gap: 10px; }
 .backup-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
@@ -473,33 +458,20 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       <div class="parts" id="parts" hidden>
         <button type="button" class="part" data-part="cash" aria-pressed="true"><span class="plabel">Bargeld</span><span class="pval num" id="partCash">0,00 €</span></button>
         <button type="button" class="part" data-part="online" aria-pressed="false"><span class="plabel">Online</span><span class="pval num" id="partOnline">0,00 €</span></button>
-        <p class="parts-hint">Tippe auf Bargeld oder Online und zähle den Betrag mit den Tasten zusammen.</p>
+        <p class="parts-hint">Tippe auf Bargeld oder Online und gib den Betrag ein.</p>
       </div>
 
-      <output class="amount num" id="amountOut" aria-live="polite">0,00 €</output>
-
-      <div class="coins" id="coins" role="group" aria-label="Betrag dazuzählen">
-        <button type="button" class="coin cent" data-v="10">+0,10</button>
-        <button type="button" class="coin cent" data-v="20">+0,20</button>
-        <button type="button" class="coin cent" data-v="50">+0,50</button>
-        <button type="button" class="coin" data-v="100">+1 €</button>
-        <button type="button" class="coin" data-v="200">+2 €</button>
-        <button type="button" class="coin" data-v="500">+5 €</button>
-        <button type="button" class="coin" data-v="1000">+10 €</button>
-        <button type="button" class="coin" data-v="2000">+20 €</button>
+      <div class="amount-row">
+        <output class="amount num" id="amountOut" aria-live="polite">0,00 €</output>
+        <button type="button" class="clear-amt" id="clearAmt" aria-label="Betrag löschen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
 
-      <div class="coin-tools">
-        <button type="button" class="tool" id="undoCoin" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Rückgängig</button>
-        <button type="button" class="tool" id="resetAmt" disabled>Zurücksetzen</button>
+      <div class="keypad" id="keypad" role="group" aria-label="Betrag eingeben">
+        <button type="button" class="key" data-k="1">1</button><button type="button" class="key" data-k="2">2</button><button type="button" class="key" data-k="3">3</button><button type="button" class="key" data-k="4">4</button><button type="button" class="key" data-k="5">5</button><button type="button" class="key" data-k="6">6</button><button type="button" class="key" data-k="7">7</button><button type="button" class="key" data-k="8">8</button><button type="button" class="key" data-k="9">9</button>
+        <button type="button" class="key" data-k="00">00</button>
+        <button type="button" class="key" data-k="0">0</button>
+        <button type="button" class="key fn" data-k="back" aria-label="Letzte Ziffer löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 5H20a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H8.5L2.5 12z"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5"/></svg></button>
       </div>
-
-      <button type="button" class="custom-toggle" id="customToggle" aria-expanded="false" aria-controls="customRow">Betrag eintippen</button>
-      <form class="custom" id="customRow" hidden novalidate>
-        <input id="customInput" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 25,50" aria-label="Betrag in Euro">
-        <button type="submit">Übernehmen</button>
-        <p class="custom-err" id="customErr" hidden></p>
-      </form>
 
       <button type="button" class="primary" id="addBtn" disabled>Lädt…</button>
     </div>
@@ -509,7 +481,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       <span id="listHint"></span>
     </div>
     <ul class="list" id="tipList" hidden></ul>
-    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, tippe den Betrag zusammen und dann auf Hinzufügen.</p>
+    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, gib den Betrag ein und tippe auf Hinzufügen.</p>
   </section>
 
   <!-- Month view -->
@@ -794,38 +766,24 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     renderAmount();
     savePrefs();
   }
-  // Each tap adds to the amount; "Rückgängig" steps back one tap.
-  var hist = [];
-  function snapshot() {
-    hist.push({ amount: state.amount, split: Object.assign({}, state.split) });
-    if (hist.length > 50) hist.shift();
-  }
+  // Cash-register keypad: digits fill in from the right, so 2, 5, 0 gives 2,50 €.
   function bumpAmount() {
     var el = $('amountOut');
     el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   }
-  function addCoin(v) {
-    if (curAmount() >= MAX_AMOUNT) { toast('Höchstens ' + fmt(MAX_AMOUNT) + ' pro Trinkgeld.'); return; }
-    snapshot();
-    setAmount(curAmount() + v);
-    bumpAmount();
+  function pressKey(k) {
+    var a = curAmount(), next;
+    if (k === 'back') next = Math.floor(a / 10);
+    else if (k === '00') next = a * 100;
+    else next = a * 10 + Number(k);
+    if (next > MAX_AMOUNT) { toast('Höchstens ' + fmt(MAX_AMOUNT) + ' pro Trinkgeld.'); return; }
+    setAmount(next);
+    if (k !== 'back') bumpAmount();
   }
-  function undoCoin() {
-    var h = hist.pop();
-    if (!h) return;
-    state.amount = h.amount;
-    state.split = h.split;
-    renderAmount();
-  }
-  function resetAmount() {
-    if (!state.amount && !state.split.cash && !state.split.online) return;
-    snapshot();
-    state.amount = 0;
-    state.split = { cash: 0, online: 0 };
-    renderAmount();
+  function clearPart() {
+    setAmount(0);
   }
   function clearAmount() {
-    hist = [];
     state.amount = 0;
     state.split = { cash: 0, online: 0 };
     state.part = 'cash';
@@ -1052,7 +1010,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('shiftEmpty').hidden = !!tips.length;
     $('shiftEmpty').textContent = state.mode === 'private'
       ? 'Keine Trinkgelder vorhanden.'
-      : 'Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, tippe den Betrag zusammen und dann auf Hinzufügen.';
+      : 'Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, gib den Betrag ein und tippe auf Hinzufügen.';
     $('addCard').hidden = state.mode === 'private';
   }
 
@@ -1114,8 +1072,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
   function renderAmount() {
     var a = curAmount();
     $('amountOut').textContent = fmt(a);
-    $('undoCoin').disabled = !hist.length;
-    $('resetAmt').disabled = !state.amount && !state.split.cash && !state.split.online;
+    $('clearAmt').hidden = a <= 0;
 
     var card = $('addCard');
     var kind = state.type === 'both' ? state.part : state.type;
@@ -1168,11 +1125,18 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
   }
 
   /* ---------- Other controls ---------- */
-  Array.prototype.forEach.call(document.querySelectorAll('.coin'), function (b) {
-    b.addEventListener('click', function () { addCoin(Number(b.getAttribute('data-v'))); });
+  Array.prototype.forEach.call(document.querySelectorAll('.key'), function (b) {
+    b.addEventListener('click', function () { pressKey(b.getAttribute('data-k')); });
   });
-  $('undoCoin').addEventListener('click', undoCoin);
-  $('resetAmt').addEventListener('click', resetAmount);
+  $('clearAmt').addEventListener('click', clearPart);
+  // A computer keyboard works too: digits and Backspace.
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (e.metaKey || e.ctrlKey || e.altKey || state.tab !== 'shift') return;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    if (/^[0-9]$/.test(e.key)) { pressKey(e.key); e.preventDefault(); }
+    else if (e.key === 'Backspace') { pressKey('back'); e.preventDefault(); }
+  });
   Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
     b.addEventListener('click', function () { setType(b.getAttribute('data-type')); });
   });
@@ -1208,48 +1172,6 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       state.day = today();
       render();
     }
-  });
-
-  /* ---------- Typed amount (over 20 €) ---------- */
-  $('customToggle').addEventListener('click', function () {
-    var row = $('customRow');
-    var open = row.hidden;
-    row.hidden = !open;
-    $('customToggle').setAttribute('aria-expanded', String(open));
-    $('customErr').hidden = true;
-    if (open) {
-      var inp = $('customInput');
-      inp.value = curAmount() > 0 ? (curAmount() / 100).toFixed(2).replace('.', ',') : '';
-      inp.focus();
-      inp.select();
-    }
-  });
-  $('customRow').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var v = $('customInput').value.replace(/[\s€]/g, '');
-    var err = $('customErr');
-    if (!/^\d{1,3}([.,]\d{1,2})?$/.test(v)) {
-      err.textContent = 'Bitte einen Betrag wie 25,50 eingeben.';
-      err.hidden = false;
-      return;
-    }
-    var cents = Math.round(parseFloat(v.replace(',', '.')) * 100);
-    if (cents <= 0) {
-      err.textContent = 'Der Betrag muss größer als 0 sein.';
-      err.hidden = false;
-      return;
-    }
-    if (cents > MAX_AMOUNT) {
-      err.textContent = 'Höchstens ' + fmt(MAX_AMOUNT) + ' pro Trinkgeld.';
-      err.hidden = false;
-      return;
-    }
-    err.hidden = true;
-    snapshot();
-    setAmount(cents);
-    $('customRow').hidden = true;
-    $('customToggle').setAttribute('aria-expanded', 'false');
-    $('customInput').blur();
   });
 
   /* ---------- Backup: save to and load from a file ---------- */
