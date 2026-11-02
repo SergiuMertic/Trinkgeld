@@ -1,6 +1,6 @@
 // Service worker: keeps the app working without internet.
 // Bump CACHE when any file changes so phones pick up the new version.
-const CACHE = 'trinkgeld-v9';
+const CACHE = 'trinkgeld-v10';
 const ASSETS = [
   "./",
   "./index.html",
@@ -18,7 +18,9 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -30,6 +32,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Ask the server every time (no-cache), so a new version shows up on the next open.
+function fresh(req) {
+  try { return fetch(new Request(req, { cache: 'no-cache' })); } catch (e) { return fetch(req); }
+}
+
 function timeout(ms) {
   return new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
 }
@@ -38,10 +45,10 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
 
-  // The page itself: try the network briefly so updates arrive, otherwise use the saved copy.
+  // The page itself: get the newest version when online, otherwise use the saved copy.
   if (req.mode === 'navigate') {
     event.respondWith(
-      Promise.race([fetch(req), timeout(2500)])
+      Promise.race([fresh(req), timeout(4000)])
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();

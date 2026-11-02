@@ -542,6 +542,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 (function () {
   'use strict';
 
+  var APP_VERSION = '10';   // shown at the bottom of the page
   var MAX_AMOUNT = 20000;  // hard cap per tip: 200,00 €
 
   var $ = function (id) { return document.getElementById(id); };
@@ -1112,7 +1113,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     else if (state.mode === 'local') t = 'Gespeichert auf diesem iPhone. Funktioniert auch ohne Internet.';
     else if (state.mode === 'private') t = 'Dieser Tracker ist privat. Nur der Besitzer kann Trinkgelder sehen und hinzufügen.';
     else t = 'Lädt deine Trinkgelder…';
-    $('note').textContent = t;
+    $('note').textContent = t + ' · Version ' + APP_VERSION;
   }
 
   function render() {
@@ -1255,8 +1256,20 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 
   /* ---------- Offline support ---------- */
   if ('serviceWorker' in navigator) {
+    // When a new version has been installed, reload once so it shows right away.
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js').catch(function () {});
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function (reg) {
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') reg.update().catch(function () {});
+        });
+      }).catch(function () {});
     });
   }
   if (navigator.storage && navigator.storage.persist) {
