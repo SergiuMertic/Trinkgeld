@@ -261,15 +261,6 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
 }
 .primary:active:not(:disabled) { transform: scale(0.98); }
 .primary:disabled { opacity: 0.4; }
-.none-btn {
-  height: 48px; width: 100%; border-radius: 14px;
-  border: 1px solid var(--well-line); background: transparent; color: var(--ink);
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  font-size: 16px; font-weight: 600; touch-action: manipulation;
-}
-.none-btn svg { width: 19px; height: 19px; color: var(--muted); }
-.none-btn:active:not(:disabled) { transform: scale(0.98); }
-.none-btn:disabled { opacity: 0.4; }
 
 
 /* Lists */
@@ -485,7 +476,6 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       </div>
 
       <button type="button" class="primary" id="addBtn" disabled>Lädt…</button>
-      <button type="button" class="none-btn" id="noneBtn" disabled><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>Kein Trinkgeld (0 €)</button>
     </div>
 
     <div class="section-head">
@@ -493,7 +483,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       <span id="listHint"></span>
     </div>
     <ul class="list" id="tipList" hidden></ul>
-    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, gib den Betrag ein und tippe auf Hinzufügen.</p>
+    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, gib den Betrag ein und tippe auf Hinzufügen. Ohne Betrag wird ein Kunde ohne Trinkgeld gespeichert.</p>
   </section>
 
   <!-- Month view -->
@@ -554,7 +544,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 (function () {
   'use strict';
 
-  var APP_VERSION = '11';   // shown at the bottom of the page
+  var APP_VERSION = '12';   // shown at the bottom of the page
   var MAX_AMOUNT = 20000;  // hard cap per tip: 200,00 €
 
   var $ = function (id) { return document.getElementById(id); };
@@ -706,9 +696,11 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       if (c > 0 && o > 0) return { id: newId(), amount: c + o, type: 'both', cash: c, online: o, at: at };
       if (c > 0) return { id: newId(), amount: c, type: 'cash', at: at };
       if (o > 0) return { id: newId(), amount: o, type: 'online', at: at };
-      return null;
+      return { id: newId(), amount: 0, type: 'none', at: at };
     }
-    return state.amount > 0 ? { id: newId(), amount: state.amount, type: state.type, at: at } : null;
+    return state.amount > 0
+      ? { id: newId(), amount: state.amount, type: state.type, at: at }
+      : { id: newId(), amount: 0, type: 'none', at: at };
   }
 
   /* ---------- Saving ---------- */
@@ -836,20 +828,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     render();
     var big = $('shiftTotal');
     big.classList.remove('bump'); void big.offsetWidth; big.classList.add('bump');
-    toast(describe(tip) + ' hinzugefügt');
-  }
-  function addNone() {
-    if (!canWrite()) return;
-    var date = state.day;
-    var tip = { id: newId(), amount: 0, type: 'none', at: new Date().toISOString(), trip: currentTrip(date) };
-    clearAmount();
-    var cur = state.shifts[date];
-    var next = Object.assign({}, state.shifts);
-    next[date] = shiftWith(date, (cur ? cur.tips : []).concat(tip));
-    state.shifts = next;
-    persist(date);
-    render();
-    toast('Kunde ohne Trinkgeld gespeichert', 'Rückgängig', function () { removeTip(date, tip.id); });
+    toast(describe(tip) + ' hinzugefügt', 'Rückgängig', function () { removeTip(date, tip.id); });
   }
   function removeTip(date, id) {
     var s = state.shifts[date];
@@ -1142,9 +1121,8 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       add.textContent = 'Lädt…';
     } else {
       var preview = makeTip();
-      add.disabled = !preview || !canWrite();
-      $('noneBtn').disabled = !canWrite();
-      add.textContent = !preview ? 'Betrag antippen'
+      add.disabled = !canWrite();
+      add.textContent = preview.type === 'none' ? 'Kein Trinkgeld (0 €) hinzufügen'
         : preview.type === 'both' ? fmt(preview.amount) + ' hinzufügen'
         : describe(preview) + ' hinzufügen';
     }
@@ -1193,7 +1171,6 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     b.addEventListener('click', function () { state.part = b.getAttribute('data-part'); renderAmount(); });
   });
   $('addBtn').addEventListener('click', addTip);
-  $('noneBtn').addEventListener('click', addNone);
   $('tripEnd').addEventListener('click', function () {
     var s = state.shifts[state.day];
     var cur = currentTrip(state.day);
