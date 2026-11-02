@@ -232,39 +232,25 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
 .seg svg { width: 18px; height: 18px; flex: none; }
 .seg button[aria-checked="true"] { background: var(--primary); color: var(--primary-ink); box-shadow: var(--shadow); }
 
-.readout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
-.fine {
-  height: 42px; min-width: 62px; padding: 0 10px; border-radius: 12px;
-  background: var(--surface-2); border: 1px solid var(--well-line); color: var(--ink); font-weight: 600; font-size: 15px;
+.amount { display: block; font-family: var(--font-display); font-weight: 700; font-size: 50px; line-height: 1; text-align: center; color: var(--ink); padding: 4px 0; }
+.amount.bump { animation: bump 0.25s ease-out; }
+.coins { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.coin {
+  height: 54px; min-width: 0; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--well-line); color: var(--ink);
+  font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums;
+  touch-action: manipulation; transition: transform 0.08s ease;
 }
-.fine:disabled { opacity: 0.4; }
-.amount { font-family: var(--font-display); font-weight: 700; font-size: 50px; line-height: 1; text-align: center; color: var(--ink); }
-
-.slider {
-  --r: 14px; --p: 0;
-  position: relative; height: 58px;
-  touch-action: pan-y; user-select: none; -webkit-user-select: none;
+.coin.cent { font-size: 16px; font-weight: 600; }
+.coin:active { transform: scale(0.93); background: var(--hero); }
+.coin-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tool {
+  height: 42px; border-radius: 12px; border: 1px solid var(--well-line);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  color: var(--muted); font-size: 15px; font-weight: 600; touch-action: manipulation;
 }
-.slider:focus { outline: none; }
-.slider.drag { cursor: grabbing; }
-.slider .track {
-  position: absolute; left: var(--r); right: var(--r); top: 16px; height: 6px;
-  border-radius: 3px; background: var(--track); overflow: hidden;
-}
-.slider .fill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); background: var(--active-bar); }
-.slider .thumb {
-  position: absolute; top: 5px; width: 28px; height: 28px; margin-left: -14px;
-  left: calc(var(--r) + (100% - 2 * var(--r)) * var(--p));
-  border-radius: 50%; background: var(--thumb); box-shadow: var(--thumb-shadow);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-  touch-action: none; cursor: grab;
-}
-.slider .thumb::before { content: ""; position: absolute; inset: -12px; border-radius: 50%; }
-.slider.drag .thumb { transform: scale(1.1); }
-.slider:focus-visible .thumb { box-shadow: var(--thumb-shadow), 0 0 0 4px var(--focus); }
-.ticks { position: absolute; left: var(--r); right: var(--r); top: 34px; height: 22px; }
-.ticks i { position: absolute; top: 0; width: 1px; height: 4px; margin-left: -0.5px; background: var(--muted); opacity: 0.45; }
-.ticks span { position: absolute; top: 7px; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tool svg { width: 17px; height: 17px; }
+.tool:disabled { opacity: 0.4; }
 
 .primary {
   height: 54px; width: 100%; border-radius: 14px;
@@ -273,6 +259,7 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
 }
 .primary:active:not(:disabled) { transform: scale(0.98); }
 .primary:disabled { opacity: 0.4; }
+
 
 /* Lists */
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 4px; }
@@ -486,30 +473,28 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       <div class="parts" id="parts" hidden>
         <button type="button" class="part" data-part="cash" aria-pressed="true"><span class="plabel">Bargeld</span><span class="pval num" id="partCash">0,00 €</span></button>
         <button type="button" class="part" data-part="online" aria-pressed="false"><span class="plabel">Online</span><span class="pval num" id="partOnline">0,00 €</span></button>
-        <p class="parts-hint">Tippe auf Bargeld oder Online und stelle den Betrag mit dem Regler ein.</p>
+        <p class="parts-hint">Tippe auf Bargeld oder Online und zähle den Betrag mit den Tasten zusammen.</p>
       </div>
 
-      <div class="readout">
-        <button type="button" class="fine" id="minus" aria-label="10 Cent weniger">−0,10</button>
-        <output class="amount num" id="amountOut" for="slider">2,00 €</output>
-        <button type="button" class="fine" id="plus" aria-label="10 Cent mehr">+0,10</button>
+      <output class="amount num" id="amountOut" aria-live="polite">0,00 €</output>
+
+      <div class="coins" id="coins" role="group" aria-label="Betrag dazuzählen">
+        <button type="button" class="coin cent" data-v="10">+0,10</button>
+        <button type="button" class="coin cent" data-v="20">+0,20</button>
+        <button type="button" class="coin cent" data-v="50">+0,50</button>
+        <button type="button" class="coin" data-v="100">+1 €</button>
+        <button type="button" class="coin" data-v="200">+2 €</button>
+        <button type="button" class="coin" data-v="500">+5 €</button>
+        <button type="button" class="coin" data-v="1000">+10 €</button>
+        <button type="button" class="coin" data-v="2000">+20 €</button>
       </div>
 
-      <div class="slider" id="slider" role="slider" tabindex="0" aria-label="Trinkgeldbetrag in Euro"
-           aria-valuemin="0" aria-valuemax="20" aria-valuenow="2" aria-valuetext="2,00 €">
-        <div class="track"><div class="fill"></div></div>
-        <div class="thumb"></div>
-        <div class="ticks num" aria-hidden="true">
-          <i style="left:0%"></i><i style="left:25%"></i><i style="left:50%"></i><i style="left:75%"></i><i style="left:100%"></i>
-          <span style="left:0%">0</span>
-          <span style="left:25%">5</span>
-          <span style="left:50%">10</span>
-          <span style="left:75%">15</span>
-          <span style="left:100%">20 €</span>
-        </div>
+      <div class="coin-tools">
+        <button type="button" class="tool" id="undoCoin" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Rückgängig</button>
+        <button type="button" class="tool" id="resetAmt" disabled>Zurücksetzen</button>
       </div>
 
-      <button type="button" class="custom-toggle" id="customToggle" aria-expanded="false" aria-controls="customRow">Mehr als 20 €? Betrag eingeben</button>
+      <button type="button" class="custom-toggle" id="customToggle" aria-expanded="false" aria-controls="customRow">Betrag eintippen</button>
       <form class="custom" id="customRow" hidden novalidate>
         <input id="customInput" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 25,50" aria-label="Betrag in Euro">
         <button type="submit">Übernehmen</button>
@@ -524,7 +509,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       <span id="listHint"></span>
     </div>
     <ul class="list" id="tipList" hidden></ul>
-    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle den Betrag mit dem Regler, tippe auf Bargeld oder Online und dann auf Hinzufügen.</p>
+    <p class="empty" id="shiftEmpty">Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, tippe den Betrag zusammen und dann auf Hinzufügen.</p>
   </section>
 
   <!-- Month view -->
@@ -585,9 +570,6 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 (function () {
   'use strict';
 
-  var MAX_SLIDER = 2000;   // slider range: 0 to 20,00 € (in cents); larger amounts are typed in
-  var STEP = 10;           // slider step: 0,10 €
-  var FINE = 10;           // fine buttons: 0,10 €
   var MAX_AMOUNT = 20000;  // hard cap per tip: 200,00 €
 
   var $ = function (id) { return document.getElementById(id); };
@@ -616,10 +598,10 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     dayIsAuto: true,
     month: today().slice(0, 7),
     tab: 'shift',
-    amount: 200,
+    amount: 0,
     type: 'cash',
-    split: { cash: 200, online: 200 },   // used when type is 'both'
-    part: 'cash',                         // which part of a split tip the slider edits
+    split: { cash: 0, online: 0 },       // used when type is 'both'
+    part: 'cash',                         // which part of a split tip the buttons add to
     mode: 'loading',     // loading | cloud | local | private
     loaded: false,
     error: ''
@@ -632,19 +614,12 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
   function writeLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   var prefs = readLS(PREFS);
   if (prefs) {
-    if (Number.isInteger(prefs.amount) && prefs.amount >= 0 && prefs.amount <= MAX_AMOUNT) state.amount = prefs.amount;
     if (prefs.type === 'cash' || prefs.type === 'online' || prefs.type === 'both') state.type = prefs.type;
-    if (prefs.split && typeof prefs.split === 'object') {
-      ['cash', 'online'].forEach(function (k) {
-        var v = prefs.split[k];
-        if (Number.isInteger(v) && v >= 0 && v <= MAX_AMOUNT) state.split[k] = v;
-      });
-    }
   }
   var prefTimer = 0;
   function savePrefs() {
     clearTimeout(prefTimer);
-    prefTimer = setTimeout(function () { writeLS(PREFS, { amount: state.amount, type: state.type, split: state.split }); }, 400);
+    prefTimer = setTimeout(function () { writeLS(PREFS, { type: state.type }); }, 400);
   }
 
   /* ---------- Data helpers ---------- */
@@ -819,6 +794,42 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     renderAmount();
     savePrefs();
   }
+  // Each tap adds to the amount; "Rückgängig" steps back one tap.
+  var hist = [];
+  function snapshot() {
+    hist.push({ amount: state.amount, split: Object.assign({}, state.split) });
+    if (hist.length > 50) hist.shift();
+  }
+  function bumpAmount() {
+    var el = $('amountOut');
+    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  }
+  function addCoin(v) {
+    if (curAmount() >= MAX_AMOUNT) { toast('Höchstens ' + fmt(MAX_AMOUNT) + ' pro Trinkgeld.'); return; }
+    snapshot();
+    setAmount(curAmount() + v);
+    bumpAmount();
+  }
+  function undoCoin() {
+    var h = hist.pop();
+    if (!h) return;
+    state.amount = h.amount;
+    state.split = h.split;
+    renderAmount();
+  }
+  function resetAmount() {
+    if (!state.amount && !state.split.cash && !state.split.online) return;
+    snapshot();
+    state.amount = 0;
+    state.split = { cash: 0, online: 0 };
+    renderAmount();
+  }
+  function clearAmount() {
+    hist = [];
+    state.amount = 0;
+    state.split = { cash: 0, online: 0 };
+    state.part = 'cash';
+  }
   function setType(type) {
     state.type = type;
     renderAmount();
@@ -830,6 +841,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     var tip = makeTip();
     if (!tip) return;
     tip.trip = currentTrip(date);
+    clearAmount();
     var cur = state.shifts[date];
     var next = Object.assign({}, state.shifts);
     next[date] = shiftWith(date, (cur ? cur.tips : []).concat(tip));
@@ -1040,7 +1052,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('shiftEmpty').hidden = !!tips.length;
     $('shiftEmpty').textContent = state.mode === 'private'
       ? 'Keine Trinkgelder vorhanden.'
-      : 'Noch kein Trinkgeld in dieser Schicht. Wähle den Betrag mit dem Regler, tippe auf Bargeld oder Online und dann auf Hinzufügen.';
+      : 'Noch kein Trinkgeld in dieser Schicht. Wähle Bargeld oder Online, tippe den Betrag zusammen und dann auf Hinzufügen.';
     $('addCard').hidden = state.mode === 'private';
   }
 
@@ -1099,15 +1111,11 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('monthEmpty').textContent = 'Keine Trinkgelder im ' + monthName + ' gespeichert.';
   }
 
-  var slider = $('slider');
   function renderAmount() {
     var a = curAmount();
     $('amountOut').textContent = fmt(a);
-    slider.style.setProperty('--p', String(Math.min(a, MAX_SLIDER) / MAX_SLIDER));
-    slider.setAttribute('aria-valuenow', (Math.min(a, MAX_SLIDER) / 100).toFixed(2));
-    slider.setAttribute('aria-valuetext', fmt(a));
-    $('minus').disabled = a <= 0;
-    $('plus').disabled = a >= MAX_AMOUNT;
+    $('undoCoin').disabled = !hist.length;
+    $('resetAmt').disabled = !state.amount && !state.split.cash && !state.split.online;
 
     var card = $('addCard');
     var kind = state.type === 'both' ? state.part : state.type;
@@ -1130,7 +1138,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     } else {
       var preview = makeTip();
       add.disabled = !preview || !canWrite();
-      add.textContent = !preview ? 'Betrag mit dem Regler wählen'
+      add.textContent = !preview ? 'Betrag antippen'
         : preview.type === 'both' ? fmt(preview.amount) + ' hinzufügen'
         : describe(preview) + ' hinzufügen';
     }
@@ -1159,56 +1167,12 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     renderNote();
   }
 
-  /* ---------- Slider input: drag anywhere on the track ---------- */
-  var dragging = false;
-  var grabOffset = 0;
-  var R = 14;
-  function thumbX(r) {
-    var p = Math.min(curAmount(), MAX_SLIDER) / MAX_SLIDER;
-    return r.left + R + (r.width - 2 * R) * p;
-  }
-  function setFromX(x) {
-    var r = slider.getBoundingClientRect();
-    var frac = (x - r.left - R) / Math.max(1, r.width - 2 * R);
-    frac = Math.max(0, Math.min(1, frac));
-    setAmount(Math.round(frac * MAX_SLIDER / STEP) * STEP);
-  }
-  slider.addEventListener('pointerdown', function (e) {
-    if (e.button !== undefined && e.button > 0) return;
-    // Only the round handle changes the amount. A touch anywhere else on the bar
-    // does nothing, so scrolling the page never changes the tip by accident.
-    var r = slider.getBoundingClientRect();
-    var tx = thumbX(r);
-    var ty = r.top + 19;
-    if (Math.abs(e.clientX - tx) > 26 || Math.abs(e.clientY - ty) > 26) return;
-    dragging = true;
-    grabOffset = e.clientX - tx;
-    try { slider.setPointerCapture(e.pointerId); } catch (err) {}
-    slider.classList.add('drag');
-    e.preventDefault();
-  });
-  slider.addEventListener('pointermove', function (e) { if (dragging) setFromX(e.clientX - grabOffset); });
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
-    slider.addEventListener(ev, function () { dragging = false; slider.classList.remove('drag'); });
-  });
-  slider.addEventListener('keydown', function (e) {
-    var a = curAmount();
-    switch (e.key) {
-      case 'ArrowRight': case 'ArrowUp': a = Math.floor(a / STEP) * STEP + STEP; break;
-      case 'ArrowLeft': case 'ArrowDown': a = Math.ceil(a / STEP) * STEP - STEP; break;
-      case 'PageUp': a += 500; break;
-      case 'PageDown': a -= 500; break;
-      case 'Home': a = 0; break;
-      case 'End': a = MAX_SLIDER; break;
-      default: return;
-    }
-    e.preventDefault();
-    setAmount(a);
-  });
-
   /* ---------- Other controls ---------- */
-  $('minus').addEventListener('click', function () { setAmount(curAmount() - FINE); });
-  $('plus').addEventListener('click', function () { setAmount(curAmount() + FINE); });
+  Array.prototype.forEach.call(document.querySelectorAll('.coin'), function (b) {
+    b.addEventListener('click', function () { addCoin(Number(b.getAttribute('data-v'))); });
+  });
+  $('undoCoin').addEventListener('click', undoCoin);
+  $('resetAmt').addEventListener('click', resetAmount);
   Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
     b.addEventListener('click', function () { setType(b.getAttribute('data-type')); });
   });
@@ -1281,6 +1245,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       return;
     }
     err.hidden = true;
+    snapshot();
     setAmount(cents);
     $('customRow').hidden = true;
     $('customToggle').setAttribute('aria-expanded', 'false');

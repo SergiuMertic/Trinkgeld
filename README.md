@@ -4,7 +4,7 @@ A small offline web app for delivery drivers to track tips per shift, with cash 
 
 ## Features
 
-- Add a tip with a finger slider (0 to 20 €, 0,10 € steps) or type a larger amount
+- Add a tip by tapping buttons that add up (+0,10 € to +20 €), with undo, or type the amount
 - Cash (Bargeld), online, or both from the same customer in one entry
 - Split a shift into trips (Touren): end a trip with one tap and see what each trip earned
 - Totals per shift and per month, with a cash and online split
