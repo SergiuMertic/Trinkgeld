@@ -6,6 +6,7 @@ A small offline web app for delivery drivers to track tips per shift, with cash 
 
 - Enter a tip on a cash-register keypad (2, 5, 0 gives 2,50 €), up to 200 €
 - Cash (Bargeld), online, or both from the same customer in one entry
+- Record customers who gave no tip (0 €), so every delivery is counted
 - Split a shift into trips (Touren): end a trip with one tap and see what each trip earned
 - Totals per shift and per month, with a cash and online split
 - Works without internet once installed on the home screen

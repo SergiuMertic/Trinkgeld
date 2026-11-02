@@ -261,6 +261,15 @@ h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-h
 }
 .primary:active:not(:disabled) { transform: scale(0.98); }
 .primary:disabled { opacity: 0.4; }
+.none-btn {
+  height: 48px; width: 100%; border-radius: 14px;
+  border: 1px solid var(--well-line); background: transparent; color: var(--ink);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 16px; font-weight: 600; touch-action: manipulation;
+}
+.none-btn svg { width: 19px; height: 19px; color: var(--muted); }
+.none-btn:active:not(:disabled) { transform: scale(0.98); }
+.none-btn:disabled { opacity: 0.4; }
 
 
 /* Lists */
@@ -275,6 +284,8 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 .tico svg { width: 20px; height: 20px; }
 .tico.cash { background: var(--cash-soft); color: var(--cash); }
 .tico.online { background: var(--online-soft); color: var(--online); }
+.tico.none { background: var(--surface-2); color: var(--muted); }
+.tip.is-none .amt { color: var(--muted); }
 .tico.both { background: linear-gradient(135deg, var(--cash-soft) 50%, var(--online-soft) 50%); color: var(--ink); }
 .tmeta { display: flex; flex-direction: column; min-width: 0; }
 .tname { font-weight: 600; }
@@ -474,6 +485,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       </div>
 
       <button type="button" class="primary" id="addBtn" disabled>Lädt…</button>
+      <button type="button" class="none-btn" id="noneBtn" disabled><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>Kein Trinkgeld (0 €)</button>
     </div>
 
     <div class="section-head">
@@ -542,7 +554,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
 (function () {
   'use strict';
 
-  var APP_VERSION = '10';   // shown at the bottom of the page
+  var APP_VERSION = '11';   // shown at the bottom of the page
   var MAX_AMOUNT = 20000;  // hard cap per tip: 200,00 €
 
   var $ = function (id) { return document.getElementById(id); };
@@ -556,11 +568,12 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
   var fDayShort = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
   var fMonth = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' });
   var fTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
-  var LABEL = { cash: 'Bargeld', online: 'Online', both: 'Bargeld + Online' };
+  var LABEL = { cash: 'Bargeld', online: 'Online', both: 'Bargeld + Online', none: 'Kein Trinkgeld' };
   document.documentElement.lang = 'de';
   var ICON = {
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
     online: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg>',
+    none: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
     both: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="8" width="11" height="8" rx="1.5"/><circle cx="7" cy="12" r="1.5"/><rect x="15" y="4" width="7.5" height="16" rx="2"/><path d="M17.8 17h2"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
   };
@@ -603,6 +616,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     var trip = Math.round(Number(t.trip));
     if (!isFinite(trip) || trip < 1 || trip > 99) trip = 1;
     var note = typeof t.note === 'string' ? t.note.slice(0, 40) : '';
+    if (t.type === 'none') return { id: id, amount: 0, type: 'none', at: at, trip: trip };
     if (t.type === 'both') {
       var c = Math.round(Number(t.cash)), o = Math.round(Number(t.online));
       if (!isFinite(c) || !isFinite(o) || c < 0 || o < 0 || c + o <= 0 || c + o > 1000000) return null;
@@ -637,12 +651,24 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     tips.forEach(function (t) {
       if (t.type === 'both') { cash += t.cash; online += t.online; }
       else if (t.type === 'cash') cash += t.amount;
-      else online += t.amount;
+      else if (t.type === 'online') online += t.amount;
     });
     return { cash: cash, online: online, total: cash + online, count: tips.length };
   }
   function tipsWord(n) { return n === 1 ? '1 Eintrag' : n + ' Einträge'; }
   function tripsWord(n) { return n === 1 ? '1 Tour' : n + ' Touren'; }
+  function kundenWord(n) { return n === 1 ? '1 Kunde' : n + ' Kunden'; }
+  // Customers = entries made in the app (one per delivery); imported daily totals are not customers.
+  function customers(tips) {
+    var real = tips.filter(function (t) { return t.note !== 'Tagessumme'; });
+    var none = real.filter(function (t) { return t.type === 'none'; }).length;
+    var money = 0;
+    real.forEach(function (t) { money += t.amount; });
+    return { count: real.length, none: none, money: money, imported: real.length < tips.length };
+  }
+  function customersText(c) {
+    return kundenWord(c.count) + (c.none ? ' · ' + c.none + ' ohne Trinkgeld' : '');
+  }
   function tripOf(t) { return t.trip || 1; }
   // The trip (Tour) new tips go into: the highest trip with tips, or a newer one started with "Tour beenden".
   function currentTrip(date) {
@@ -667,6 +693,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
   function canWrite() { return state.mode === 'local' || (state.mode === 'cloud' && state.loaded); }
   function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function describe(t) {
+    if (t.type === 'none') return 'Kunde ohne Trinkgeld';
     return t.type === 'both'
       ? fmt(t.cash) + ' Bargeld + ' + fmt(t.online) + ' Online'
       : fmt(t.amount) + ' ' + LABEL[t.type];
@@ -811,6 +838,19 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     big.classList.remove('bump'); void big.offsetWidth; big.classList.add('bump');
     toast(describe(tip) + ' hinzugefügt');
   }
+  function addNone() {
+    if (!canWrite()) return;
+    var date = state.day;
+    var tip = { id: newId(), amount: 0, type: 'none', at: new Date().toISOString(), trip: currentTrip(date) };
+    clearAmount();
+    var cur = state.shifts[date];
+    var next = Object.assign({}, state.shifts);
+    next[date] = shiftWith(date, (cur ? cur.tips : []).concat(tip));
+    state.shifts = next;
+    persist(date);
+    render();
+    toast('Kunde ohne Trinkgeld gespeichert', 'Rückgängig', function () { removeTip(date, tip.id); });
+  }
   function removeTip(date, id) {
     var s = state.shifts[date];
     if (!s) return;
@@ -945,7 +985,8 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('shiftTotal').textContent = fmt(s.total);
     $('shiftCash').textContent = fmt(s.cash);
     $('shiftOnline').textContent = fmt(s.online);
-    $('shiftCount').textContent = tipsWord(s.count) + (nTrips > 1 ? ' · ' + tripsWord(nTrips) : '');
+    var sc = customers(tips);
+    $('shiftCount').textContent = (sc.count ? customersText(sc) : sc.imported ? 'Tagessumme' : '0 Kunden') + (nTrips > 1 ? ' · ' + tripsWord(nTrips) : '');
     var cs = sum(tips.filter(function (t) { return tripOf(t) === curTrip; }));
     var ended = !cs.count && curTrip > 1;
     var ps = ended ? sum(tips.filter(function (t) { return tripOf(t) === curTrip - 1; })) : null;
@@ -984,7 +1025,10 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       head.querySelector('.th-name').appendChild(live);
     }
     head.querySelector('.th-total').textContent = fmt(gs.total);
-    head.querySelector('.th-split').textContent = gs.count ? fmt(gs.cash) + ' Bargeld · ' + fmt(gs.online) + ' Online' : 'Noch keine Einträge';
+    var gc = customers(gt);
+    head.querySelector('.th-split').textContent = gs.count
+      ? (gc.count ? kundenWord(gc.count) + ' · ' : '') + fmt(gs.cash) + ' Bargeld · ' + fmt(gs.online) + ' Online'
+      : 'Noch keine Einträge';
     list.appendChild(head);
     gt.forEach(function (t) {
       var li = document.createElement('li');
@@ -1000,6 +1044,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
       var detail = t.type === 'both' ? fmt(t.cash) + ' Bargeld · ' + fmt(t.online) + ' Online' : '';
       li.querySelector('.time').textContent = [t.note, detail, timeText].filter(Boolean).join(' · ');
       li.querySelector('.amt').textContent = fmt(t.amount);
+      if (t.type === 'none') li.classList.add('is-none');
       var del = li.querySelector('.del');
       del.setAttribute('aria-label', describe(t) + ' löschen');
       del.hidden = !canWrite();
@@ -1021,11 +1066,13 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('monthLabel').textContent = monthName;
 
     var dates = Object.keys(state.shifts).filter(function (k) { return k.slice(0, 7) === state.month; }).sort().reverse();
-    var cash = 0, online = 0, count = 0, max = 0, trips = 0;
+    var cash = 0, online = 0, count = 0, max = 0, trips = 0, cust = 0, custNone = 0, custMoney = 0;
     var rows = dates.map(function (date) {
       var s = sum(state.shifts[date].tips);
       cash += s.cash; online += s.online; count += s.count;
       trips += tripCount(state.shifts[date].tips);
+      var mc = customers(state.shifts[date].tips);
+      cust += mc.count; custNone += mc.none; custMoney += mc.money;
       if (s.total > max) max = s.total;
       return { date: date, s: s };
     });
@@ -1035,7 +1082,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     $('monthOnline').textContent = fmt(online);
     setSplit($('monthSplit'), cash, online);
     $('monthMeta').textContent = dates.length
-      ? dates.length + (dates.length === 1 ? ' Schicht' : ' Schichten') + ' · ' + tripsWord(trips) + ' · ' + tipsWord(count) + ' · Ø ' + fmt(Math.round(total / dates.length)) + ' pro Schicht · Ø ' + fmt(Math.round(total / Math.max(1, trips))) + ' pro Tour'
+      ? dates.length + (dates.length === 1 ? ' Schicht' : ' Schichten') + ' · ' + tripsWord(trips) + (cust ? ' · ' + customersText({ count: cust, none: custNone }) : '') + ' · Ø ' + fmt(Math.round(total / dates.length)) + ' pro Schicht · Ø ' + fmt(Math.round(total / Math.max(1, trips))) + ' pro Tour' + (cust ? ' · Ø ' + fmt(Math.round(custMoney / cust)) + ' pro Kunde' : '')
       : 'Noch keine Schichten';
 
     var list = $('shiftList');
@@ -1096,6 +1143,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     } else {
       var preview = makeTip();
       add.disabled = !preview || !canWrite();
+      $('noneBtn').disabled = !canWrite();
       add.textContent = !preview ? 'Betrag antippen'
         : preview.type === 'both' ? fmt(preview.amount) + ' hinzufügen'
         : describe(preview) + ' hinzufügen';
@@ -1145,6 +1193,7 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin
     b.addEventListener('click', function () { state.part = b.getAttribute('data-part'); renderAmount(); });
   });
   $('addBtn').addEventListener('click', addTip);
+  $('noneBtn').addEventListener('click', addNone);
   $('tripEnd').addEventListener('click', function () {
     var s = state.shifts[state.day];
     var cur = currentTrip(state.day);
